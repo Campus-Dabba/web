@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -51,26 +51,42 @@ export default function CompleteProfileSetup() {
     }
   }, [form]);
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (file: File) => {
     try {
-      const file = event.target.files?.[0];
-      if (!file) return;
+      if (!file) {
+        throw new Error("Please select a file");
+      }
+
+      const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error("Please upload a valid image file (JPG or PNG)");
+      }
 
       setIsUploading(true);
-      const supabase = await createClient();
+      const supabase = createClient();
 
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase.storage
-        .from('profile-images')
-        .upload(fileName, file);
+      // Create folder structure with user ID
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error } = await supabase.storage
+        .from("profile-images")
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
 
       if (error) throw error;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile-images')
-        .getPublicUrl(fileName);
+      // Get public URL
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("profile-images").getPublicUrl(fileName);
 
       setImageUrl(publicUrl);
       toast({
@@ -81,46 +97,58 @@ export default function CompleteProfileSetup() {
       console.error(error);
       toast({
         title: "Error",
-        description: "Failed to upload image",
-        variant: "destructive"
+        description:
+          error instanceof Error ? error.message : "Failed to upload image",
+        variant: "destructive",
       });
     } finally {
       setIsUploading(false);
     }
   };
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
       const supabase = await createClient();
-      
-      const { error } = await supabase
-        .from('users')
-        .update({
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) throw new Error("No user found");
+
+      const { error } = await supabase.from("users").upsert(
+        {
+          id: user.id, // Explicitly set the id from auth
+          email: values.email,
           first_name: values.first_name,
           last_name: values.last_name,
-          email: values.email,
           phone: values.phone,
           profile_image: imageUrl,
           address: {
             street: values.street,
             city: values.city,
             state: values.state,
-            pincode: values.pincode
+            pincode: values.pincode,
           },
           user_preferences: {
-            theme: 'light',
-            notifications: true
+            theme: "light",
+            notifications: true,
           },
-          favourites: []
-        })
-        .eq('email', values.email);
+          favourites: [],
+        },
+        {
+          onConflict: "id",
+          returning: "minimal",
+        }
+      );
 
-      if (error) throw error;
+      if (error) {
+        console.error("Update error:", error);
+        throw error;
+      }
 
       localStorage.removeItem("registrationData");
       router.push("/");
-      
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated",
@@ -130,7 +158,7 @@ export default function CompleteProfileSetup() {
       toast({
         title: "Error",
         description: "Failed to update profile",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -201,13 +229,18 @@ export default function CompleteProfileSetup() {
               id="profile-image"
               type="file"
               accept="image/*"
-              onChange={handleImageUpload}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  handleImageUpload(file);
+                }
+              }}
               disabled={isUploading}
             />
             {imageUrl && (
-              <img 
-                src={imageUrl} 
-                alt="Profile preview" 
+              <img
+                src={imageUrl}
+                alt="Profile preview"
                 className="w-24 h-24 rounded-full object-cover"
               />
             )}
@@ -270,9 +303,9 @@ export default function CompleteProfileSetup() {
             )}
           />
 
-          <Button 
-            type="submit" 
-            disabled={isLoading || isUploading} 
+          <Button
+            type="submit"
+            disabled={isLoading || isUploading}
             className="w-full"
           >
             {isLoading ? "Saving..." : "Complete Profile"}
