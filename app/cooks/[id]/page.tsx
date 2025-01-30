@@ -107,7 +107,7 @@ export default function CookProfilePage({ params }: { params: { id: string } }) 
         <div>
           <Tabs defaultValue="menu" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="menu">Today's Menu</TabsTrigger>
+              <TabsTrigger value="menu">Today's Dabba</TabsTrigger>
               <TabsTrigger value="schedule">Schedule</TabsTrigger>
             </TabsList>
             <TabsContent value="menu" className="space-y-4">

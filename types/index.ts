@@ -29,6 +29,7 @@ export interface User {
 }
 
 export interface Cook extends User {
+  description: string
   address: string
   profilePicture?: string
   certification?: string
@@ -67,6 +68,7 @@ export interface Order {
 
 export interface CartItem extends MenuItem {
   quantity: number;
+  menuItems?: MenuItem[];
 }
 
 export interface CartContextType {

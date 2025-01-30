@@ -3,6 +3,15 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const publicRoutes = ['/', '/auth/login', '/auth/register', '/browse','/cook/register','/student/register','/search',"/cart"]
 
+function isPublicRoute(path: string) {
+  // Check exact matches first
+  if (publicRoutes.includes(path)) return true
+  
+  // Check if path starts with /cooks/
+  if (path.startsWith('/cooks/')) return true
+  
+  return false
+}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -33,7 +42,7 @@ export async function updateSession(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
 
   // Check if the route requires authentication
-  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname)
+  
 
   if (!session && !isPublicRoute) {
     // Redirect to login if accessing protected route without session

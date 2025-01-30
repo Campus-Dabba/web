@@ -24,7 +24,7 @@ export function MapPreview({ address, latitude, longitude, onLocationSelect }: M
   useEffect(() => {
     const initMap = async () => {
       const loader = new Loader({
-        apiKey: "Enter the key here"
+        apiKey: "Enter the key here",
         version: "weekly",
         libraries: ["places"],
       })

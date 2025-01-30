@@ -70,7 +70,7 @@ export function MainNav() {
     <div className="mr-4 flex items-center justify-between w-full">
       <div className="flex items-center">
         <Link href="/" className="mr-6 flex items-center space-x-2">
-          <span className="hidden font-bold sm:inline-block">Campus Dabba</span>
+          <span className="hidden font-bold sm:inline-block">CampusDabba</span>
         </Link>
         <nav className="flex items-center space-x-6 text-sm font-medium">
           {navItems.map((item) => (
