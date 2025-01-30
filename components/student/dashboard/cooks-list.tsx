@@ -40,7 +40,7 @@ export function CooksList({ selectedState }: CooksListProps) {
       id: cook.id,
       cookId: cook.id,
       name: `${cook.name}'s Complete Menu`,
-      description: `Full menu by ${cook.name}`,
+      description: `Dabba by ${cook.name}`,
       price: cook.menuItems.reduce((total, item) => total + item.price, 0),
       dietaryType: "veg", // Default or derive from items
       cuisineType: "indian", // Default or derive from items
@@ -54,7 +54,7 @@ export function CooksList({ selectedState }: CooksListProps) {
     addToCart(bundledMenu);
     toast({
       title: "Added to cart",
-      description: `${cook.name}'s complete menu has been added to your cart.`,
+      description: `${cook.name}'s Dabba has been added to your cart.`,
     });
   };
 
@@ -62,7 +62,7 @@ export function CooksList({ selectedState }: CooksListProps) {
     removeFromCart(cook.id);
     toast({
       title: "Removed from cart",
-      description: `${cook.name}'s menu has been removed from your cart.`,
+      description: `${cook.name}'s Dabba has been removed from your cart.`,
     });
   };
 

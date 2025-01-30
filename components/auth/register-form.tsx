@@ -141,9 +141,6 @@ export function RegisterForm() {
               <FormControl>
                 <Input placeholder="john@example.com" type="email" {...field} />
               </FormControl>
-              <FormDescription>
-                We'll send you a verification email.
-              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

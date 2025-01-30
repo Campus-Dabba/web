@@ -68,7 +68,9 @@ export function StateCards({
 
   return (
     <div className="w-full overflow-hidden">
-      <h2 className="text-xl font-semibold mb-4 px-6">Suggestions</h2>
+      <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent border-b-2 border-orange-400 pb-2">
+        Suggestions for you
+      </h2>
       <div
         ref={containerRef}
         className="relative overflow-hidden"

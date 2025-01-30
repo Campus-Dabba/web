@@ -36,7 +36,9 @@ export default function CartPage() {
       {cart.length === 0 ? (
         <div className="text-center py-10">
           <p className="text-muted-foreground">Your cart is empty</p>
+          <Link href="/" className="mt-4">
           <Button className="mt-4">Continue Shopping</Button>
+          </Link>
         </div>
       ) : (
         <>

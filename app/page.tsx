@@ -5,6 +5,7 @@ import { CooksList } from "@/components/student/dashboard/cooks-list";
 import { StatesFilter } from "@/components/student/dashboard/states-filter";
 import { states } from "@/lib/data/states";
 import { StateCards } from "@/components/student/dashboard/StateCards";
+import { MapPreview } from "@/components/map/map-preview";
 
 export default function DashboardPage() {
   const [selectedState, setSelectedState] = useState<string>(states[0]);
@@ -39,7 +40,9 @@ export default function DashboardPage() {
       />
 
       <div className="px-6">
-        <h2 className="text-xl font-semibold mb-4">Households nearby you</h2>
+        <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent border-b-2 border-orange-400 pb-2">
+          Households nearby you
+        </h2>
       </div>
 
       <StatesFilter
@@ -47,6 +50,36 @@ export default function DashboardPage() {
         onStateChange={setSelectedState}
       />
       <CooksList selectedState={selectedState} />
+      <div className="px-6">
+        <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent border-b-2 border-orange-400 pb-2">
+          Dabba Providers near you
+        </h2>
+      </div>
+
+      <MapPreview>{/* Map component and related logic goes here */}</MapPreview>
+
+      <footer className="mt-8 p-6 bg-gray-800 text-white">
+        <div className="container mx-auto flex flex-col md:flex-row justify-between">
+          <div className="mb-6 md:mb-0">
+            <h3 className="font-semibold text-lg">Contact Us</h3>
+            <p className="mt-2">Email: contact@example.com</p>
+            <p>Phone: (123) 456-7890</p>
+          </div>
+          <div className="mb-6 md:mb-0">
+            <h3 className="font-semibold text-lg">Help</h3>
+            <p className="mt-2">FAQ</p>
+            <p>Support</p>
+          </div>
+          <div>
+            <h3 className="font-semibold text-lg">About Us</h3>
+            <p className="mt-2">Company Info</p>
+            <p>Careers</p>
+          </div>
+        </div>
+        <div className="mt-6 text-center text-sm text-gray-400">
+          &copy; {new Date().getFullYear()} Campus Dabba. All rights reserved.
+        </div>
+      </footer>
     </div>
   );
 }
