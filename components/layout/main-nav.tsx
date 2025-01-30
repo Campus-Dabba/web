@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/providers/cart-provider";
 import { useToast } from "@/components/ui/use-toast";
 import InputSearch from "@/components/ui/search-bar";
-import { UserNav } from "@/components/layout/user-nav";
+import { UserNav } from "@/components/layout/User-nav";
 import { createClient } from "@/utils/supabase/client";
 import { Session } from "@supabase/supabase-js";
 

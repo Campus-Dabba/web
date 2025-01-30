@@ -96,9 +96,7 @@ export function RegisterForm() {
       }
 
       // Redirect to the additional information page
-      router.push("/registration");
-
-      
+      router.push("/auth/registration");
     } catch (error) {
       if (error instanceof Error) {
         toast({
