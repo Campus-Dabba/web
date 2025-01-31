@@ -5,7 +5,7 @@ const Input_search = () => {
   return (
     <StyledWrapper>
       <div className="input-container">
-        <input className="input" name="text" type="text" placeholder="Explore Cooks............." />
+        <input className="input" name="text" type="text" placeholder="Explore Cooks........" />
       </div>
     </StyledWrapper>
   );

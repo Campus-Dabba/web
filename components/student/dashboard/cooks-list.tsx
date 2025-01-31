@@ -21,7 +21,8 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
-import { Cook, MenuItem, CartItem } from "@/types";
+import { Cook, MenuItem, CartItem, DayOfWeek, dayMapping } from "@/types";
+import { useState, useEffect } from "react";
 
 interface CooksListProps {
   selectedState: string;
@@ -31,39 +32,92 @@ interface CookWithMenu extends Cook {
   menuItems: MenuItem[];
 }
 
-export function CooksList({ selectedState }: CooksListProps) {
-  const cooks = cooksByState[selectedState as keyof typeof cooksByState] || [];
-  const { cart, addToCart, removeFromCart } = useCart();
+interface CartOperationResult {
+  success: boolean;
+  message: string;
+}
 
-  const handleAddToCart = (cook: CookWithMenu) => {
+const getCurrentDayNumber = (): DayOfWeek => {
+  const day = new Date().getDay();
+  return (day === 0 ? 7 : day) as DayOfWeek;
+};
+
+export function CooksList({ selectedState }: CooksListProps) {
+  const { cart, addToCart, removeFromCart } = useCart();
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const cooks = cooksByState[selectedState] || [];
+
+  useEffect(() => {
+    const newQuantities: Record<string, number> = {};
+    cart.forEach((item) => {
+      newQuantities[item.id] = item.quantity;
+    });
+    setQuantities(newQuantities);
+  }, [cart]);
+
+  const getCartItemId = (cookId: string) =>
+    `${cookId}-${getCurrentDayNumber()}`;
+
+  const handleQuantityChange = (cook: CookWithMenu, change: number) => {
+    const itemId = getCartItemId(cook.id);
+    const currentQty = quantities[itemId] || 0;
+    const newQty = Math.max(0, currentQty + change);
+
+   
+
+    if (change < 0) {
+      handleRemoveFromCart(cook);
+      return;
+    }
+
+    
+    setQuantities((prev) => ({ ...prev, [itemId]: newQty }));
+
+    const todayMenu = cook.menuItems.filter(
+      (item) => item.dayOfWeek === getCurrentDayNumber()
+    );
+
     const bundledMenu: CartItem = {
-      id: cook.id,
+      id: itemId,
       cookId: cook.id,
-      name: `${cook.name}'s Complete Menu`,
-      description: `Dabba by ${cook.name}`,
-      price: cook.menuItems.reduce((total, item) => total + item.price, 0),
-      dietaryType: "veg", // Default or derive from items
-      cuisineType: "indian", // Default or derive from items
-      mealType: "lunch", // Default or derive from items
-      dayOfWeek: 1, // Default value
+      name: `${cook.name}'s ${dayMapping[getCurrentDayNumber()]} Dabba`,
+      description: `${dayMapping[getCurrentDayNumber()]}'s special dabba`,
+      price: todayMenu.reduce((total, item) => total + item.price, 0),
+      dietaryType: todayMenu[0]?.dietaryType || "veg",
+      cuisineType: todayMenu[0]?.cuisineType || "indian",
+      mealType: "lunch",
+      dayOfWeek: getCurrentDayNumber(),
       isAvailable: true,
-      quantity: 1,
-      menuItems: cook.menuItems,
+      quantity: newQty,
+      menuItems: todayMenu,
     };
 
     addToCart(bundledMenu);
+    setQuantities((prev) => ({ ...prev, [itemId]: newQty }));
+
     toast({
       title: "Added to cart",
-      description: `${cook.name}'s Dabba has been added to your cart.`,
+      description: `${cook.name}'s ${dayMapping[getCurrentDayNumber()]} Dabba has been added to your cart.`,
     });
   };
-
   const handleRemoveFromCart = (cook: CookWithMenu) => {
-    removeFromCart(cook.id);
-    toast({
-      title: "Removed from cart",
-      description: `${cook.name}'s Dabba has been removed from your cart.`,
-    });
+    try {
+      const cartItemId = `${cook.id}-${getCurrentDayNumber()}`;
+      removeFromCart(cartItemId);
+      toast({
+        title: "Removed from cart",
+        description: `${cook.name}'s ${
+          dayMapping[getCurrentDayNumber()]
+        } Dabba has been removed from your cart.`,
+      });
+    } catch (error) {
+      console.error("Error removing from cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove item from cart",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -112,49 +166,57 @@ export function CooksList({ selectedState }: CooksListProps) {
                   <div className="space-y-2 border border-primary p-2 rounded-md">
                     {" "}
                     {/* Added outline */}
-                    {cook.menuItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex justify-between items-start"
-                      >
-                        <div className="space-y-1">
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
+                    {cook.menuItems
+                      .filter(
+                        (item) => item.dayOfWeek === getCurrentDayNumber()
+                      )
+                      .map((item) => (
+                        <div key={item.id} className="text-sm">
+                          <div className="flex justify-between">
+                            <span>{item.name}</span>
+                            <span>₹{item.price}</span>
+                          </div>
+                          <p className="text-muted-foreground">
                             {item.description}
                           </p>
-                          <p className="text-sm text-muted-foreground">
-                            ₹{item.price}
-                          </p>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                   <ScrollBar orientation="vertical" />
                 </ScrollArea>
               </div>
-              <div className="flex justify-between items-center pt-2">
-                <div className="text-lg font-semibold">
+              <div className="flex justify-between items-center">
+                <p className="font-semibold">
                   Total: ₹
-                  {cook.menuItems.reduce(
-                    (total, item) => total + item.price,
-                    0
+                  {getTotalPrice(cook, quantities[getCartItemId(cook.id)] || 0)}
+                </p>
+                <div className="flex items-center gap-2">
+                  {quantities[getCartItemId(cook.id)] ? (
+                    <>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={() => handleRemoveFromCart(cook)}
+                      >
+                        -
+                      </Button>
+                      <span className="w-8 text-center">
+                        {quantities[getCartItemId(cook.id)]}
+                      </span>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={() => handleQuantityChange(cook, 1)}
+                      >
+                        +
+                      </Button>
+                    </>
+                  ) : (
+                    <Button onClick={() => handleQuantityChange(cook, 1)}>
+                      Add Today's Dabba
+                    </Button>
                   )}
                 </div>
-                {cart.find((item) => item.id === cook.id) ? (
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleRemoveFromCart(cook)}
-                  >
-                    Remove Dabba
-                  </Button>
-                ) : (
-                  <Button
-                    variant="default"
-                    onClick={() => handleAddToCart(cook)}
-                  >
-                    Add Dabba to Cart
-                  </Button>
-                )}
               </div>
             </div>
           </CardContent>
@@ -167,4 +229,12 @@ export function CooksList({ selectedState }: CooksListProps) {
       ))}
     </div>
   );
+
+  function getTotalPrice(cook: CookWithMenu, quantity: number): number {
+    return (
+      cook.menuItems
+        .filter((item) => item.dayOfWeek === getCurrentDayNumber())
+        .reduce((total, item) => total + item.price, 0) * quantity
+    );
+  }
 }

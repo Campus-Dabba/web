@@ -1,27 +1,123 @@
-import type { Metadata } from "next"
-import Image from "next/image"
-import { Check, MapPin, Clock, Truck } from "lucide-react"
+"use client";
+import { useState, useEffect } from "react";
+import type { Metadata } from "next";
+import Image from "next/image";
+import { Check, MapPin, Clock, Truck } from "lucide-react";
+import { useCart } from "@/components/providers/cart-provider";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cooksByState } from "@/lib/data/states";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import {
+  Cook,
+  MenuItem,
+  CartItem,
+  dayMapping,
+  WeeklySchedule,
+  DayOfWeek,
+} from "@/types";
+import { useToast } from "@/components/ui/use-toast";
+import { Plus, Minus } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { cooksByState } from "@/lib/data/states"
+// Add these helper functions before the component
 
-export const metadata: Metadata = {
-  title: "Cook Profile",
-  description: "View cook's profile and menu",
-}
+const { toast } = useToast();
 
-export default function CookProfilePage({ params }: { params: { id: string } }) {
+export default function CookProfilePage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const getCurrentDayNumber = (): DayOfWeek => {
+    const day = new Date().getDay();
+    return (day === 0 ? 7 : day) as DayOfWeek;
+  };
+  // Add state for selected day
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek>(
+    getCurrentDayNumber()
+  );
+  const day = selectedDay;
+  const dayName = dayMapping[day as DayOfWeek];
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+
   // Find cook from all states
   const cook = Object.values(cooksByState)
     .flat()
-    .find((c) => c.id === params.id)
+    .find((c) => c.id === params.id);
 
   if (!cook) {
-    return <div>Cook not found</div>
+    return <div>Cook not found</div>;
   }
+  const { cart, addToCart, removeFromCart } = useCart();
+
+  useEffect(() => {
+    const newQuantities: Record<string, number> = {};
+    cart.forEach((item) => {
+      newQuantities[item.id] = item.quantity;
+    });
+    setQuantities(newQuantities);
+  }, [cart]);
+
+  // Add getCartItemId helper
+  const getCartItemId = (cookId: string, day: number) => `${cookId}-${day}`;
+
+  const handleQuantityChange = (day: number, change: number) => {
+    if (!cook) return;
+
+    const itemId = getCartItemId(cook.id, day);
+    const currentQty = quantities[itemId] || 0;
+    const newQty = Math.max(0, currentQty + change);
+
+    if (change < 0) {
+      handleRemoveFromCart(day);
+      return;
+    }
+
+    setQuantities((prev) => ({ ...prev, [itemId]: newQty }));
+
+    const dayMenu = cook.menuItems.filter((item) => item.dayOfWeek === day);
+
+    const bundledMenu: CartItem = {
+      id: itemId,
+      cookId: cook.id,
+      name: `${cook.name}'s ${dayMapping[day as DayOfWeek]} Dabba`,
+      description: `${dayMapping[day as DayOfWeek]}'s special dabba`,
+      price: dayMenu.reduce((total, item) => total + item.price, 0),
+      dietaryType: dayMenu[0]?.dietaryType || "veg",
+      cuisineType: dayMenu[0]?.cuisineType || "indian",
+      mealType: "lunch",
+      dayOfWeek: day,
+      isAvailable: true,
+      quantity: newQty,
+      menuItems: dayMenu,
+    };
+
+    addToCart(bundledMenu);
+    toast({
+      title: "Added to cart",
+      description: `${cook.name}'s ${
+        dayMapping[day as DayOfWeek]
+      } Dabba has been added to your cart.`,
+    });
+  };
+
+  // Add remove handler
+  const handleRemoveFromCart = (day: number) => {
+    if (!cook) return;
+    const itemId = getCartItemId(cook.id, day);
+    removeFromCart(itemId);
+    const newQuantities = { ...quantities };
+    delete newQuantities[itemId];
+    setQuantities(newQuantities);
+    toast({
+      title: "Removed from cart",
+      description: `${cook.name}'s ${
+        dayMapping[day as DayOfWeek]
+      } Dabba has been removed from your cart.`,
+    });
+  };
 
   return (
     <div className="container mx-auto py-6">
@@ -30,7 +126,10 @@ export default function CookProfilePage({ params }: { params: { id: string } }) 
           <div className="space-y-6">
             <div className="flex items-center gap-4">
               <Image
-                src={cook.profilePicture || "https://source.unsplash.com/random/100x100?chef"}
+                src={
+                  cook.profilePicture ||
+                  "https://source.unsplash.com/random/100x100?chef"
+                }
                 alt={cook.name}
                 width={80}
                 height={80}
@@ -39,7 +138,9 @@ export default function CookProfilePage({ params }: { params: { id: string } }) 
               <div>
                 <h1 className="text-2xl font-bold">{cook.name}</h1>
                 <p className="text-muted-foreground">Cooking & Baking</p>
-                <p className="text-sm text-muted-foreground">{cook.certification}</p>
+                <p className="text-sm text-muted-foreground">
+                  {cook.certification}
+                </p>
               </div>
             </div>
 
@@ -73,8 +174,9 @@ export default function CookProfilePage({ params }: { params: { id: string } }) 
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">About</h2>
               <p className="text-muted-foreground">
-                I am a home chef who loves to cook and bake. I specialize in South Indian cuisine. I use organic
-                ingredients and cook with love.
+                I am a home chef who loves to cook and bake. I specialize in
+                South Indian cuisine. I use organic ingredients and cook with
+                love.
               </p>
             </div>
 
@@ -108,35 +210,309 @@ export default function CookProfilePage({ params }: { params: { id: string } }) 
           <Tabs defaultValue="menu" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="menu">Today's Dabba</TabsTrigger>
-              <TabsTrigger value="schedule">Schedule</TabsTrigger>
+              <TabsTrigger value="schedule">This week's Dabba</TabsTrigger>
             </TabsList>
-            <TabsContent value="menu" className="space-y-4">
-              {cook.menuItems.map((item) => (
-                <Card key={item.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">{item.name}</h3>
-                        <p className="text-sm text-muted-foreground">{item.description}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="secondary" className="mb-2">
-                          {item.dietaryType}
-                        </Badge>
-                        <p className="font-semibold">₹{item.price}</p>
-                      </div>
+            <TabsContent value="menu">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-xl font-bold">Today's Dabba</h3>
+                      <Badge variant="secondary">
+                        {cook.menuItems.find(
+                          (item) => item.dayOfWeek === getCurrentDayNumber()
+                        )?.dietaryType || "veg"}
+                      </Badge>
                     </div>
-                    <Button className="mt-4 w-full">Add to Cart</Button>
-                  </CardContent>
-                </Card>
-              ))}
+
+                    <ScrollArea className="h-[250px]">
+                      <div className="space-y-2">
+                        {cook.menuItems
+                          .filter(
+                            (item) => item.dayOfWeek === getCurrentDayNumber()
+                          )
+                          .map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex justify-between items-start border-b pb-2"
+                            >
+                              <div>
+                                <h4 className="font-medium">{item.name}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {item.description}
+                                </p>
+                              </div>
+                              <p className="font-semibold">₹{item.price}</p>
+                            </div>
+                          ))}
+                      </div>
+                      <ScrollBar orientation="vertical" />
+                    </ScrollArea>
+
+                    <div className="flex justify-between items-center mt-2">
+                      <div className="text-lg font-semibold">
+                        Total: ₹
+                        {cook.menuItems
+                          .filter(
+                            (item) => item.dayOfWeek === getCurrentDayNumber()
+                          )
+                          .reduce((total, item) => total + item.price, 0)}
+                      </div>
+                      {quantities[`${cook.id}-${day}`] ? (
+                        <div className="flex items-center gap-2">
+                          {quantities[
+                            getCartItemId(cook.id, getCurrentDayNumber())
+                          ] ? (
+                            <>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                onClick={() =>
+                                  handleQuantityChange(
+                                    getCurrentDayNumber(),
+                                    -1
+                                  )
+                                }
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                              <span className="w-8 text-center">
+                                {
+                                  quantities[
+                                    getCartItemId(
+                                      cook.id,
+                                      getCurrentDayNumber()
+                                    )
+                                  ]
+                                }
+                              </span>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                onClick={() =>
+                                  handleQuantityChange(getCurrentDayNumber(), 1)
+                                }
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              onClick={() =>
+                                handleQuantityChange(getCurrentDayNumber(), 1)
+                              }
+                            >
+                              Add Today's Dabba
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        // Keep existing Add button
+                        <Button
+                          className="w-[200px]"
+                          onClick={() => {
+                            const dayMenu = cook.menuItems.filter(
+                              (item) => item.dayOfWeek === Number(day)
+                            );
+                            const bundledMenu: CartItem = {
+                              id: `${cook.id}-${day}`,
+                              cookId: cook.id,
+                              name: `${cook.name}'s ${dayName} Dabba`,
+                              description: `${dayName}'s special dabba by ${cook.name}`,
+                              price: dayMenu.reduce(
+                                (total, item) => total + item.price,
+                                0
+                              ),
+                              dietaryType: dayMenu[0]?.dietaryType || "veg",
+                              cuisineType: dayMenu[0]?.cuisineType || "indian",
+                              mealType: dayMenu[0]?.mealType || "lunch",
+                              dayOfWeek: Number(day) as DayOfWeek,
+                              isAvailable: true,
+                              quantity: 1,
+                              menuItems: dayMenu,
+                            };
+                            addToCart(bundledMenu);
+                            setQuantities((prev) => ({
+                              ...prev,
+                              [`${cook.id}-${day}`]: 1,
+                            }));
+                            toast({
+                              title: "Added to cart",
+                              description: `${dayName}'s Dabba has been added to your cart.`,
+                            });
+                          }}
+                        >
+                          Add {dayName}'s Dabba
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
+
             <TabsContent value="schedule">
               <Card>
                 <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">
-                    Schedule and availability information will be displayed here.
-                  </p>
+                  <Tabs
+                    defaultValue={getCurrentDayNumber().toString()}
+                    className="flex"
+                  >
+                    <TabsList className="w-[150px] h-full flex-col">
+                      {Object.entries(dayMapping).map(([day, dayName]) => (
+                        <TabsTrigger
+                          key={day}
+                          value={day}
+                          className="justify-start w-full"
+                        >
+                          {dayName}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+
+                    {Object.entries(dayMapping).map(([day, dayName]) => (
+                      <TabsContent
+                        key={day}
+                        value={day}
+                        className="flex-1 ml-4"
+                      >
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-xl font-bold">
+                              {dayName}'s Menu
+                            </h3>
+                            <Badge variant="secondary">
+                              {cook.menuItems.find(
+                                (item) => item.dayOfWeek === Number(day)
+                              )?.dietaryType || "veg"}
+                            </Badge>
+                          </div>
+
+                          <ScrollArea className="h-[250px]">
+                            <div className="space-y-2">
+                              {cook.menuItems
+                                .filter(
+                                  (item) => item.dayOfWeek === Number(day)
+                                )
+                                .map((item) => (
+                                  <div
+                                    key={item.id}
+                                    className="flex justify-between items-start border-b pb-2"
+                                  >
+                                    <div>
+                                      <h4 className="font-medium">
+                                        {item.name}
+                                      </h4>
+                                      <p className="text-sm text-muted-foreground">
+                                        {item.description}
+                                      </p>
+                                    </div>
+                                    <p className="font-semibold">
+                                      ₹{item.price}
+                                    </p>
+                                  </div>
+                                ))}
+                            </div>
+                            <ScrollBar orientation="vertical" />
+                          </ScrollArea>
+
+                          <div className="flex justify-between items-center mt-2">
+                            <div className="text-lg font-semibold">
+                              Total: ₹
+                              {cook.menuItems
+                                .filter(
+                                  (item) => item.dayOfWeek === Number(day)
+                                )
+                                .reduce((total, item) => total + item.price, 0)}
+                            </div>
+                            {quantities[`${cook.id}-${day}`] ? (
+                              <div className="flex items-center gap-2">
+                                {quantities[
+                                  getCartItemId(cook.id, Number(day))
+                                ] ? (
+                                  <>
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      onClick={() =>
+                                        handleQuantityChange(Number(day), -1)
+                                      }
+                                    >
+                                      <Minus className="h-4 w-4" />
+                                    </Button>
+                                    <span className="w-8 text-center">
+                                      {
+                                        quantities[
+                                          getCartItemId(cook.id, Number(day))
+                                        ]
+                                      }
+                                    </span>
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      onClick={() =>
+                                        handleQuantityChange(Number(day), 1)
+                                      }
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button
+                                    onClick={() =>
+                                      handleQuantityChange(Number(day), 1)
+                                    }
+                                  >
+                                    Add {dayName}'s Dabba
+                                  </Button>
+                                )}
+                              </div>
+                            ) : (
+                              // Keep existing Add button
+                              <Button
+                                className="w-[200px]"
+                                onClick={() => {
+                                  const dayMenu = cook.menuItems.filter(
+                                    (item) => item.dayOfWeek === Number(day)
+                                  );
+                                  const bundledMenu: CartItem = {
+                                    id: `${cook.id}-${day}`,
+                                    cookId: cook.id,
+                                    name: `${cook.name}'s ${dayName} Dabba`,
+                                    description: `${dayName}'s special dabba by ${cook.name}`,
+                                    price: dayMenu.reduce(
+                                      (total, item) => total + item.price,
+                                      0
+                                    ),
+                                    dietaryType:
+                                      dayMenu[0]?.dietaryType || "veg",
+                                    cuisineType:
+                                      dayMenu[0]?.cuisineType || "indian",
+                                    mealType: dayMenu[0]?.mealType || "lunch",
+                                    dayOfWeek: Number(day) as DayOfWeek,
+                                    isAvailable: true,
+                                    quantity: 1,
+                                    menuItems: dayMenu,
+                                  };
+                                  addToCart(bundledMenu);
+                                  setQuantities((prev) => ({
+                                    ...prev,
+                                    [`${cook.id}-${day}`]: 1,
+                                  }));
+                                  toast({
+                                    title: "Added to cart",
+                                    description: `${dayName}'s Dabba has been added to your cart.`,
+                                  });
+                                }}
+                              >
+                                Add {dayName}'s Dabba
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </TabsContent>
+                    ))}
+                  </Tabs>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -144,6 +520,5 @@ export default function CookProfilePage({ params }: { params: { id: string } }) 
         </div>
       </div>
     </div>
-  )
+  );
 }
-

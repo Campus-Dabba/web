@@ -60,6 +60,19 @@ export const cooksByState: Record<State, (Cook & { menuItems: MenuItem[] })[]> =
           dayOfWeek: 1,
           isAvailable: true,
         },
+        {
+          id: "1",
+          cookId: "1",
+          name: "Friday Special Thali", 
+          description: "Friday's special menu",
+          price: 150,
+          dietaryType: "veg",
+          cuisineType: "indian",
+          mealType: "lunch",
+          dayOfWeek: 5, // Change this to match Friday
+          isAvailable: true
+        },
+        
       ],
     },
   ],
