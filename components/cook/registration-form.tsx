@@ -1,17 +1,25 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2 } from "lucide-react"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
-import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { toast } from "@/components/ui/use-toast"
-
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/use-toast";
+import { createClient } from "@/utils/supabase/client";
 const formSchema = z.object({
   name: z.string().min(2, {
     message: "Name must be at least 2 characters.",
@@ -25,11 +33,11 @@ const formSchema = z.object({
   password: z.string().min(8, {
     message: "Password must be at least 8 characters.",
   }),
-})
+});
 
 export function CookRegistrationForm() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -39,29 +47,64 @@ export function CookRegistrationForm() {
       phone: "",
       password: "",
     },
-  })
+  });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
-      // Here we would typically make an API call to register the cook
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const supabase = await createClient();
+      const { error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            first_name: values.name.split(" ")[0],
+            last_name: values.name.split(" ")[1],
+            phone: values.phone,
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+      // Store registration data in localStorage
+      const registrationData = {
+        cook_name: values.name,
+        cook_email: values.email,
+        cook_phone: values.phone,
+        cook_passsword: values.password,
+      };
+      localStorage.setItem(
+        "registrationData",
+        JSON.stringify(registrationData)
+      );
 
       toast({
-        title: "Registration successful!",
-        description: "Please check your email to verify your account.",
-      })
+        title: "Registration started",
+        description: "Please complete your profile setup.",
+      });
+      // Sign in the user immediately after registration
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
 
-      router.push("/cook/verify")
+      if (signInError) {
+        throw signInError;
+      }
+
+      // Redirect to the additional information page
+      router.push("/cook/registration");
     } catch (error) {
       toast({
         title: "Something went wrong.",
         description: "Please try again later.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -127,6 +170,5 @@ export function CookRegistrationForm() {
         </Button>
       </form>
     </Form>
-  )
+  );
 }
-

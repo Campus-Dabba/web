@@ -27,6 +27,7 @@ const formSchema = z.object({
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State is required"),
   pincode: z.string().min(6, "Valid pincode required"),
+  password: z.string().optional(),
 });
 
 export default function CompleteProfileSetup() {
@@ -48,6 +49,7 @@ export default function CompleteProfileSetup() {
       form.setValue("last_name", lastName || "");
       form.setValue("email", parsedData.email);
       form.setValue("phone", parsedData.phone);
+      form.setValue("password", parsedData.password);
     }
   }, [form]);
 
@@ -135,6 +137,7 @@ export default function CompleteProfileSetup() {
             notifications: true,
           },
           favourites: [],
+          password: values.password,
         },
         {
           onConflict: "id",
@@ -203,6 +206,19 @@ export default function CompleteProfileSetup() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input {...field} disabled />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone</FormLabel>
                 <FormControl>
                   <Input {...field} disabled />
                 </FormControl>

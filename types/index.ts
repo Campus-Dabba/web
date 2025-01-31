@@ -151,13 +151,13 @@ export interface User {
   name: string
   email: string
   phone: string
-  role: UserRole
   status: UserStatus
   createdAt: Date
   updatedAt: Date
 }
 
 export interface Cook extends User {
+  userrole: "cook"
   description: string
   address: string
   profilePicture?: string

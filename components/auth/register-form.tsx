@@ -75,6 +75,7 @@ export function RegisterForm() {
         name: values.name,
         email: values.email,
         phone: values.phone,
+        password: values.password,
       };
       localStorage.setItem(
         "registrationData",
