@@ -11,112 +11,6 @@ export interface WeeklySchedule {
   }
 }
 
-export const cookSchedules: WeeklySchedule[] = [
-  {
-    cookId: "1", // Priya Sharma
-    schedule: {
-      1: [ // Monday
-        {
-          id: "m1",
-          cook_id: "1",
-          item_name: "Monday Special Thali",
-          description: "Roti, Dal, Rice, 2 Sabzi, Salad, Pickle",
-          price: 150,
-          dietary_type: "veg",
-          cuisine_type: "indian",
-          meal_type: "lunch",
-          day_of_week: 1,
-          isAvailable: true,
-        },
-      ],
-      2: [ // Tuesday
-        {
-          id: "t1",
-          cook_id: "1",
-          item_name: "Tuesday Special Thali",
-          description: "Puri, Chole, Rice, Raita, Sweet",
-          price: 160,
-          dietary_type: "veg",
-          cuisine_type: "indian",
-          meal_type: "lunch",
-          day_of_week: 2,
-          isAvailable: true,
-        },
-      ],
-      3: [ // Wednesday
-        {
-          id: "w1",
-          cook_id: "1",
-          item_name: "Wednesday Special Thali",
-          description: "Paratha, Paneer, Rice, Dal, Dessert",
-          price: 180,
-          dietary_type: "veg",
-          cuisine_type: "indian",
-          meal_type: "lunch",
-          day_of_week: 3,
-          isAvailable: true,
-        },
-      ],
-      4: [ // Thursday
-        {
-          id: "th1",
-          cook_id: "1",
-          item_name: "Thursday Special Thali",
-          description: "South Indian Special",
-          price: 170,
-          dietary_type: "veg",
-          cuisine_type: "indian",
-          meal_type: "lunch",
-          day_of_week: 4,
-          isAvailable: true,
-        },
-      ],
-      5: [ // Friday 
-        {
-          id: "f1",
-          cook_id: "1",
-          item_name: "Friday Special Thali",
-          description: "Biryani Special",
-          price: 200,
-          dietary_type: "veg",
-          cuisine_type: "indian",
-          meal_type: "lunch",
-          day_of_week: 5,
-          isAvailable: true,
-        },
-      ],
-      6: [ // Saturday
-        {
-          id: "s1",
-          cook_id: "1",
-          item_name: "Saturday Special Thali",
-          description: "Party Special",
-          price: 220,
-          dietary_type: "veg",
-          cuisine_type: "indian",
-          meal_type: "lunch",
-          day_of_week: 6,
-          isAvailable: true,
-        },
-      ],
-      7: [ // Sunday
-        {
-          id: "su1",
-          cook_id: "1",
-          item_name: "Sunday Special Thali",
-          description: "Festival Special",
-          price: 250,
-          dietary_type: "veg",
-          cuisine_type: "indian",
-          meal_type: "lunch",
-          day_of_week: 7,
-          isAvailable: true,
-        },
-      ],
-    }
-  },
-  // Add more cook schedules following the same pattern
-]
 
 export const dayMapping: Record<DayOfWeek, string> = {
   1: "Monday",
@@ -183,6 +77,7 @@ export interface MenuItem {
   meal_type: string
   day_of_week: number
   isAvailable: boolean
+  quantity: number
 }
 
 export interface Order {

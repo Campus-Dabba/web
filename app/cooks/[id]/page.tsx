@@ -10,31 +10,117 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cooksByState } from "@/lib/data/states";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import {
-  dayMapping,
-  WeeklySchedule,
-  DayOfWeek,
-} from "@/types";
+import { User, dayMapping, WeeklySchedule } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, Minus } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
-// Add these helper functions before the component
+export const getCurrentDayNumber = (): number => {
+  const today = new Date();
+  // getDay() returns 0-6 (Sunday-Saturday)
+  // We'll convert to 1-7 to match common week display patterns
+  const dayNumber = today.getDay() || 7;
+  return dayNumber;
+};
 
-export interface MenuItem {
-  id: string
-  cook_id: string
-  item_name: string
-  description: string
-  price: number
-  dietary_type: string
-  cuisine_type: string
-  meal_type: string
-  day_of_week: number
-  isAvailable: boolean
-  quantity: number
+// Add this type definition
+type DayOfWeek = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+// Add state for tracking the selected day
+
+// Add a mapping for day names (if needed)
+const dayNameToNumber: Record<string, number> = {
+  sunday: 7,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+const getDayNumber = (dayName: string | number | undefined): number => {
+  if (typeof dayName === "number") {
+    return dayName;
+  }
+
+  if (!dayName || typeof dayName !== "string") {
+    return 0;
+  }
+
+  return dayNameToNumber[dayName.toLowerCase()] || 0;
+};
+export const dayNames: Record<number, string> = {
+  1: "Monday",
+  2: "Tuesday",
+  3: "Wednesday",
+  4: "Thursday",
+  5: "Friday",
+  6: "Saturday",
+  7: "Sunday",
+};
+
+const getDayName = (dayNumber: number): string => {
+  return dayNames[dayNumber] || "Invalid day";
+};
+
+// Add these helper functions before the component
+export const formatAddress = (address: {
+  street?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+}) => {
+  if (!address) return "Address not available";
+
+  const parts = [
+    address.street,
+    address.city,
+    address.state,
+    address.pincode,
+  ].filter(Boolean);
+
+  return parts.join(", ");
+};
+
+interface Address {
+  city: string;
+  state: string;
+  street: string;
+  pincode: string;
 }
 
+export interface Cook {
+  id: string;
+  first_name: string;
+  last_name: string;
+  cook_id: string;
+  email: string;
+  description: string;
+  address: Address;
+  profile_image?: string;
+  certification?: string;
+  cuisineType?: string;
+  rating: number;
+  totalOrders: number;
+  totalEarnings: number;
+  isAvailable: boolean;
+  weeklySchedule?: WeeklySchedule;
+  menuItems?: MenuItem[];
+}
+
+export interface MenuItem {
+  id: string;
+  cook_id: string;
+  item_name: string;
+  description: string;
+  price: number;
+  dietary_type: string;
+  cuisine_type: string;
+  meal_type: string;
+  day_of_week: string;
+  isAvailable: boolean;
+  quantity: number;
+}
 
 export interface CartItem extends MenuItem {
   menuItems?: MenuItem[];
@@ -42,24 +128,35 @@ export interface CartItem extends MenuItem {
 
 const { toast } = useToast();
 
+const filterMenuItemsByDay = (
+  menuItems: MenuItem[] = [],
+  currentDay: number
+) => {
+  return menuItems.filter((item) => {
+    const itemDayNumber = getDayNumber(item.day_of_week);
+    return itemDayNumber === currentDay;
+  });
+};
 
 export default function CookProfilePage({
   params,
 }: {
   params: { id: string };
 }) {
-  const [cookData, setCookData] = useState<Cook | null>(null);
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek>(
+    getCurrentDayNumber() as DayOfWeek
+  );
   const [isLoading, setIsLoading] = useState(true);
   const { cart, addToCart, removeFromCart } = useCart();
   const [error, setError] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [cook, setCook] = useState<Cook | null>(null);
   useEffect(() => {
-    const fetchCookData = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
         const supabase = createClient();
-        
+
         const { data: cookData, error: cookError } = await supabase
           .from("cooks")
           .select("*")
@@ -69,53 +166,39 @@ export default function CookProfilePage({
         if (cookError) throw cookError;
         if (!cookData) throw new Error("Cook not found");
 
-        setCook(cookData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load cook data");
-        console.error("Error fetching cook:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCookData();
-  }, [params.id]);
-
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!cook) return <div>Cook not found</div>;
-  
-
-  useEffect(() => {
-    const fetchCookData = async () => {
-      setIsLoading(true);
-      try {
-        const supabase = createClient();
-        
-        const { data: cookData, error: cookError } = await supabase
-          .from("cooks")
+        // Fetch menu items
+        const { data: menuData, error: menuError } = await supabase
+          .from("dabba_menu")
           .select("*")
-          .eq("id", params.id)
-          .single();
+          .eq("cook_id", cookData.cook_id);
 
-        if (cookError) throw cookError;
-        if (!cookData) throw new Error("Cook not found");
+        if (menuError) throw menuError;
 
-        setCook(cookData);
+        // Merge cook and menu data
+        const mergedCook = {
+          ...cookData,
+          menuItems:
+            menuData?.map((item) => ({
+              ...item,
+              day_of_week: item.day_of_week,
+            })) || [],
+        };
+        console.log("merged cook:", mergedCook);
+
+        setCook(mergedCook);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load cook data");
+        setError(
+          err instanceof Error ? err.message : "Failed to load cook data"
+        );
         console.error("Error fetching cook:", err);
       } finally {
         setIsLoading(false);
       }
     };
-
-    fetchCookData();
+    fetchData();
   }, [params.id]);
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!cook) return <div>Cook not found</div>;
+  // Effect for cart quantities
   useEffect(() => {
     const newQuantities: Record<string, number> = {};
     cart.forEach((item) => {
@@ -128,109 +211,67 @@ export default function CookProfilePage({
   const getCartItemId = (cookId: string, day: number) => `${cookId}-${day}`;
 
   const handleQuantityChange = async (day: number, change: number) => {
-    setIsLoading(true);
-    try {
-      if (!cook) return;
+    if (!cook) return;
   
-      const itemId = getCartItemId(cook.id, day);
-      const currentQty = quantities[itemId] || 0;
-      const newQty = Math.max(0, currentQty + change);
+    const itemId = getCartItemId(cook.cook_id, day);
+    const currentQty = quantities[itemId] || 0;
+    const newQty = currentQty + change;
   
-      // Update quantities state
-      setQuantities((prev) => ({
-        ...prev,
-        [itemId]: newQty
-      }));
-  
-      // Update cart based on quantity change
-      if (change > 0) {
-        addToCart({ 
-          id: itemId,
-          cook_id: cook.cook_id,
-          day_of_week: day,
-          quantity: 1
-        });
-      } else {
-        removeFromCart(itemId);
-      }
-    } catch (error) {
-      console.error('Error updating quantities:', error);
-    } finally {
-      setIsLoading(false);
+    if (newQty <= 0) {
+      handleRemoveFromCart(day);
+      return;
     }
+  
+    const dayMenu = cook.menuItems.filter(
+      (item) => getDayNumber(item.day_of_week) === day
+    );
+  
+    const bundledMenu: CartItem = {
+      id: itemId,
+      cook_id: cook.cook_id,
+      item_name: `${cook.first_name}'s ${dayNames[day]} Dabba`,
+      description: `${dayNames[day]}'s special dabba`,
+      price: dayMenu.reduce((total, item) => total + (item.price || 0), 0),
+      dietary_type: dayMenu[0]?.dietary_type || "veg",
+      cuisine_type: cook.cuisineType || "indian",
+      meal_type: dayMenu[0]?.meal_type || "lunch",
+      day_of_week: day,
+      isAvailable: true,
+      quantity: newQty,
+      menuItems: dayMenu,
+    };
+  
+    addToCart(bundledMenu);
+    setQuantities((prev) => ({ ...prev, [itemId]: newQty }));
+  
+    toast({
+      title: change > 0 ? "Added to cart" : "Updated cart",
+      description: `${cook.first_name}'s ${dayNames[day]} Dabba has been ${
+        change > 0 ? "added to" : "updated in"
+      } your cart.`,
+    });
   };
-
-  // Add remove handler
+  
   const handleRemoveFromCart = (day: number) => {
     if (!cook) return;
     const itemId = getCartItemId(cook.cook_id, day);
     removeFromCart(itemId);
-    const newQuantities = { ...quantities };
-    delete newQuantities[itemId];
-    setQuantities(newQuantities);
+    setQuantities((prev) => {
+      const newQuantities = { ...prev };
+      delete newQuantities[itemId];
+      return newQuantities;
+    });
+  
     toast({
       title: "Removed from cart",
-      description: `${cook.name}'s ${
-        dayMapping[day as DayOfWeek]
-      } Dabba has been removed from your cart.`,
+      description: `${cook.first_name}'s ${dayNames[day]} Dabba has been removed from your cart.`,
     });
   };
 
-  useEffect(() => {
-    const fetchCookData = async () => {
-      try {
-        setIsLoading(true);
-        const supabase = createClient();
-        const [sessionError, setSessionError] = useState<string | null>(null);
-
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          throw sessionError;
-        }
-
-        // Find static cook data  
-        const staticCook = Object.values(cooksByState)
-          .flat()
-          .find((c) => c.id === params.id);
-
-        // Fetch dynamic cook data
-        const { data: dynamicCook, error: cookError } = await supabase
-          .from("cooks")
-          .select(
-            `
-            *,
-            dabba_menu (*)
-          `
-          )
-          .eq("id", params.id)
-          .single();
-
-        if (cookError) throw cookError;
-
-        // Merge static and dynamic data
-        const mergedCook = {
-          ...staticCook,
-          ...dynamicCook,
-          menuItems: dynamicCook?.dabba_menu || staticCook?.menuItems,
-        };
-
-        setCookData(mergedCook);
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          console.error(err.message);
-      } else {
-        console.error('An unknown error occurred');
-      }
-      setIsLoading(false);
-      }
-    };
-
-    fetchCookData();
-  }, [params.id]);
-
+  
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
-  if (!cookData) return <div>Cook not found</div>;
+  if (!cook) return <div>Cook not found</div>;
 
   return (
     <div className="container mx-auto py-6">
@@ -239,17 +280,16 @@ export default function CookProfilePage({
           <div className="space-y-6">
             <div className="flex items-center gap-4">
               <Image
-                src={
-                  cook.profilePicture ||
-                  "https://source.unsplash.com/random/100x100?chef"
-                }
-                alt={cook.name}
-                width={80}
-                height={80}
+                src={cook.profile_image || "/default-profile.png"}
+                alt={cook.first_name}
+                width={100}
+                height={100}
                 className="rounded-full"
               />
               <div>
-                <h1 className="text-2xl font-bold">{cook.name}</h1>
+                <h1 className="text-2xl font-bold">
+                  {cook.first_name} {cook.last_name}
+                </h1>
                 <p className="text-muted-foreground">Cooking & Baking</p>
                 <p className="text-sm text-muted-foreground">
                   {cook.certification}
@@ -261,7 +301,11 @@ export default function CookProfilePage({
               <Card>
                 <CardContent className="flex items-center gap-2 p-4">
                   <MapPin className="h-4 w-4" />
-                  <span className="text-sm">{cook.address}</span>
+                  <span className="text-sm">
+                    {cook.address
+                      ? formatAddress(cook.address)
+                      : "Address not available"}
+                  </span>
                 </CardContent>
               </Card>
               <Card>
@@ -331,26 +375,23 @@ export default function CookProfilePage({
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <h3 className="text-xl font-bold">Today's Dabba</h3>
-                      <Badge variant="secondary">
-                        {cook.menuItems.find(
-                          (item) => item.day_of_week === getCurrentDayNumber()
-                        )?.dietary_type || "veg"}
-                      </Badge>
                     </div>
 
                     <ScrollArea className="h-[250px]">
                       <div className="space-y-2">
-                        {cook.menuItems
-                          .filter(
-                            (item) => item.day_of_week === getCurrentDayNumber()
-                          )
-                          .map((item) => (
+                        {cook?.menuItems &&
+                          filterMenuItemsByDay(
+                            cook.menuItems,
+                            getCurrentDayNumber()
+                          ).map((item) => (
                             <div
                               key={item.id}
                               className="flex justify-between items-start border-b pb-2"
                             >
                               <div>
-                                <h4 className="font-medium">{item.item_name}</h4>
+                                <h4 className="font-medium">
+                                  {item.item_name}
+                                </h4>
                                 <p className="text-sm text-muted-foreground">
                                   {item.description}
                                 </p>
@@ -367,11 +408,13 @@ export default function CookProfilePage({
                         Total: ₹
                         {cook.menuItems
                           .filter(
-                            (item) => item.day_of_week === getCurrentDayNumber()
+                            (item) =>
+                              getDayNumber(item.day_of_week) ===
+                              getCurrentDayNumber()
                           )
                           .reduce((total, item) => total + item.price, 0)}
                       </div>
-                      {quantities[`${cook.id}-${day}`] ? (
+                      {quantities[`${cook.id}-${selectedDay}`] ? (
                         <div className="flex items-center gap-2">
                           {quantities[
                             getCartItemId(cook.id, getCurrentDayNumber())
@@ -425,21 +468,23 @@ export default function CookProfilePage({
                           className="w-[200px]"
                           onClick={() => {
                             const dayMenu = cook.menuItems.filter(
-                              (item) => item.day_of_week === Number(day)
+                              (item) =>
+                                getDayNumber(item.day_of_week) === selectedDay
                             );
                             const bundledMenu: CartItem = {
-                              id: `${cook.id}-${day}`,
-                              cookId: cook.id,
-                              name: `${cook.name}'s ${dayName} Dabba`,
-                              description: `${dayName}'s special dabba by ${cook.name}`,
+                              id: `${cook.id}-${selectedDay}`,
+                              cook_id: cook.id,
+                              item_name: `${cook.first_name}'s ${dayNames} Dabba`,
+                              description: `${dayNames}'s special dabba by ${cook.first_name}`,
                               price: dayMenu.reduce(
                                 (total, item) => total + item.price,
                                 0
                               ),
                               dietary_type: dayMenu[0]?.dietary_type || "veg",
-                              cuisine_type: dayMenu[0]?.cuisine_type || "indian",
+                              cuisine_type:
+                                dayMenu[0]?.cuisine_type || "indian",
                               meal_type: dayMenu[0]?.meal_type || "lunch",
-                              day_of_week: Number(day) as DayOfWeek,
+                              day_of_week: getDayName(selectedDay),
                               isAvailable: true,
                               quantity: 1,
                               menuItems: dayMenu,
@@ -447,15 +492,15 @@ export default function CookProfilePage({
                             addToCart(bundledMenu);
                             setQuantities((prev) => ({
                               ...prev,
-                              [`${cook.id}-${day}`]: 1,
+                              [`${cook.id}-${selectedDay}`]: 1,
                             }));
                             toast({
                               title: "Added to cart",
-                              description: `${dayName}'s Dabba has been added to your cart.`,
+                              description: `${dayNames}'s Dabba has been added to your cart.`,
                             });
                           }}
                         >
-                          Add {dayName}'s Dabba
+                          Add {dayNames[selectedDay]}'s Dabba
                         </Button>
                       )}
                     </div>
@@ -496,7 +541,8 @@ export default function CookProfilePage({
                             </h3>
                             <Badge variant="secondary">
                               {cook.menuItems.find(
-                                (item) => item.day_of_week === Number(day)
+                                (item) =>
+                                  getDayNumber(item.day_of_week) === Number(day)
                               )?.dietary_type || "veg"}
                             </Badge>
                           </div>
@@ -505,7 +551,9 @@ export default function CookProfilePage({
                             <div className="space-y-2">
                               {cook.menuItems
                                 .filter(
-                                  (item) => item.day_of_week === Number(day)
+                                  (item) =>
+                                    getDayNumber(item.day_of_week) ===
+                                    Number(day)
                                 )
                                 .map((item) => (
                                   <div
@@ -534,7 +582,9 @@ export default function CookProfilePage({
                               Total: ₹
                               {cook.menuItems
                                 .filter(
-                                  (item) => item.day_of_week === Number(day)
+                                  (item) =>
+                                    getDayNumber(item.day_of_week) ===
+                                    Number(day)
                                 )
                                 .reduce((total, item) => total + item.price, 0)}
                             </div>
@@ -586,13 +636,15 @@ export default function CookProfilePage({
                                 className="w-[200px]"
                                 onClick={() => {
                                   const dayMenu = cook.menuItems.filter(
-                                    (item) => item.day_of_week === Number(day)
+                                    (item) =>
+                                      getDayNumber(item.day_of_week) ===
+                                      Number(day)
                                   );
                                   const bundledMenu: CartItem = {
                                     id: `${cook.id}-${day}`,
-                                    cookId: cook.id,
-                                    name: `${cook.name}'s ${dayName} Dabba`,
-                                    description: `${dayName}'s special dabba by ${cook.name}`,
+                                    cook_id: cook.id,
+                                    item_name: `${cook.first_name}'s ${dayName} Dabba`,
+                                    description: `${dayName}'s special dabba by ${cook.first_name}`,
                                     price: dayMenu.reduce(
                                       (total, item) => total + item.price,
                                       0
@@ -601,8 +653,10 @@ export default function CookProfilePage({
                                       dayMenu[0]?.dietary_type || "veg",
                                     cuisine_type:
                                       dayMenu[0]?.cuisine_type || "indian",
-                                    mealType: dayMenu[0]?.meal_type || "lunch",
-                                    day_of_week: Number(day) as DayOfWeek,
+                                    meal_type: dayMenu[0]?.meal_type || "lunch",
+                                    day_of_week: getDayName(
+                                      Number(day) as DayOfWeek
+                                    ),
                                     isAvailable: true,
                                     quantity: 1,
                                     menuItems: dayMenu,
