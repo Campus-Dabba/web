@@ -20,6 +20,7 @@ import {
 } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 import { Plus, Minus } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
 
 // Add these helper functions before the component
 
@@ -30,6 +31,9 @@ export default function CookProfilePage({
 }: {
   params: { id: string };
 }) {
+  const [cookData, setCookData] = useState<Cook | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const getCurrentDayNumber = (): DayOfWeek => {
     const day = new Date().getDay();
     return (day === 0 ? 7 : day) as DayOfWeek;
@@ -118,6 +122,63 @@ export default function CookProfilePage({
       } Dabba has been removed from your cart.`,
     });
   };
+
+  useEffect(() => {
+    const fetchCookData = async () => {
+      try {
+        setIsLoading(true);
+        const supabase = createClient();
+
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.signInAnonymously()
+
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          throw sessionError;
+        }
+
+        // Find static cook data  
+        const staticCook = Object.values(cooksByState)
+          .flat()
+          .find((c) => c.id === params.id);
+
+        // Fetch dynamic cook data
+        const { data: dynamicCook, error: cookError } = await supabase
+          .from("cooks")
+          .select(
+            `
+            *,
+            dabba_menu (*)
+          `
+          )
+          .eq("id", params.id)
+          .single();
+
+        if (cookError) throw cookError;
+
+        // Merge static and dynamic data
+        const mergedCook = {
+          ...staticCook,
+          ...dynamicCook,
+          menuItems: dynamicCook?.dabba_menu || staticCook?.menuItems,
+        };
+
+        setCookData(mergedCook);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCookData();
+  }, [params.id]);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!cookData) return <div>Cook not found</div>;
 
   return (
     <div className="container mx-auto py-6">

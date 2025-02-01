@@ -12,7 +12,7 @@ import InputSearch from "@/components/ui/search-bar";
 import { UserNav } from "@/components/layout/User-nav";
 import { createClient } from "@/utils/supabase/client";
 import { Session } from "@supabase/supabase-js";
-import Image from 'next/image';
+import Image from "next/image";
 
 const navItems = [
   {
@@ -71,13 +71,13 @@ export function MainNav() {
     <div className="mr-4 flex items-center justify-between w-full">
       <div className="flex items-center">
         <Link href="/" className="mr-6 flex items-center space-x-2">
-        <Image
-              src="https://ejtjwejiulepzcglswis.supabase.co/storage/v1/object/public/webpage-images//logo.png"
-              alt="CampusDabba Logo"
-              width={60}
-              height={60}
-              className="mr-4 rounded-lg"
-            />
+          <Image
+            src="https://ejtjwejiulepzcglswis.supabase.co/storage/v1/object/public/webpage-images//logo.png"
+            alt="CampusDabba Logo"
+            width={60}
+            height={60}
+            className="mr-4 rounded-lg"
+          />
         </Link>
         <nav className="flex items-center space-x-6 text-sm font-medium">
           {navItems.map((item) => (
@@ -97,7 +97,15 @@ export function MainNav() {
         </nav>
       </div>
       <div className="flex items-center space-x-4">
-        {!["/search", "/auth/login", "/auth/register",'/auth/registration','/cook/register','/cook/login','/cook/registration'].includes(pathname) && (
+        {![
+          "/search",
+          "/auth/login",
+          "/auth/register",
+          "/auth/registration",
+          "/cook/register",
+          "/cook/login",
+          "/cook/registration",
+        ].includes(pathname) && (
           <Link href="/search">
             <InputSearch />
           </Link>

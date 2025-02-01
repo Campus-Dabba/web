@@ -18,98 +18,98 @@ export const cookSchedules: WeeklySchedule[] = [
       1: [ // Monday
         {
           id: "m1",
-          cookId: "1",
-          name: "Monday Special Thali",
+          cook_id: "1",
+          item_name: "Monday Special Thali",
           description: "Roti, Dal, Rice, 2 Sabzi, Salad, Pickle",
           price: 150,
-          dietaryType: "veg",
-          cuisineType: "indian",
-          mealType: "lunch",
-          dayOfWeek: 1,
+          dietary_type: "veg",
+          cuisine_type: "indian",
+          meal_type: "lunch",
+          day_of_week: 1,
           isAvailable: true,
         },
       ],
       2: [ // Tuesday
         {
           id: "t1",
-          cookId: "1",
-          name: "Tuesday Special Thali",
+          cook_id: "1",
+          item_name: "Tuesday Special Thali",
           description: "Puri, Chole, Rice, Raita, Sweet",
           price: 160,
-          dietaryType: "veg",
-          cuisineType: "indian",
-          mealType: "lunch",
-          dayOfWeek: 2,
+          dietary_type: "veg",
+          cuisine_type: "indian",
+          meal_type: "lunch",
+          day_of_week: 2,
           isAvailable: true,
         },
       ],
       3: [ // Wednesday
         {
           id: "w1",
-          cookId: "1",
-          name: "Wednesday Special Thali",
+          cook_id: "1",
+          item_name: "Wednesday Special Thali",
           description: "Paratha, Paneer, Rice, Dal, Dessert",
           price: 180,
-          dietaryType: "veg",
-          cuisineType: "indian",
-          mealType: "lunch",
-          dayOfWeek: 3,
+          dietary_type: "veg",
+          cuisine_type: "indian",
+          meal_type: "lunch",
+          day_of_week: 3,
           isAvailable: true,
         },
       ],
       4: [ // Thursday
         {
           id: "th1",
-          cookId: "1",
-          name: "Thursday Special Thali",
+          cook_id: "1",
+          item_name: "Thursday Special Thali",
           description: "South Indian Special",
           price: 170,
-          dietaryType: "veg",
-          cuisineType: "indian",
-          mealType: "lunch",
-          dayOfWeek: 4,
+          dietary_type: "veg",
+          cuisine_type: "indian",
+          meal_type: "lunch",
+          day_of_week: 4,
           isAvailable: true,
         },
       ],
       5: [ // Friday 
         {
           id: "f1",
-          cookId: "1",
-          name: "Friday Special Thali",
+          cook_id: "1",
+          item_name: "Friday Special Thali",
           description: "Biryani Special",
           price: 200,
-          dietaryType: "veg",
-          cuisineType: "indian",
-          mealType: "lunch",
-          dayOfWeek: 5,
+          dietary_type: "veg",
+          cuisine_type: "indian",
+          meal_type: "lunch",
+          day_of_week: 5,
           isAvailable: true,
         },
       ],
       6: [ // Saturday
         {
           id: "s1",
-          cookId: "1",
-          name: "Saturday Special Thali",
+          cook_id: "1",
+          item_name: "Saturday Special Thali",
           description: "Party Special",
           price: 220,
-          dietaryType: "veg",
-          cuisineType: "indian",
-          mealType: "lunch",
-          dayOfWeek: 6,
+          dietary_type: "veg",
+          cuisine_type: "indian",
+          meal_type: "lunch",
+          day_of_week: 6,
           isAvailable: true,
         },
       ],
       7: [ // Sunday
         {
           id: "su1",
-          cookId: "1",
-          name: "Sunday Special Thali",
+          cook_id: "1",
+          item_name: "Sunday Special Thali",
           description: "Festival Special",
           price: 250,
-          dietaryType: "veg",
-          cuisineType: "indian",
-          mealType: "lunch",
-          dayOfWeek: 7,
+          dietary_type: "veg",
+          cuisine_type: "indian",
+          meal_type: "lunch",
+          day_of_week: 7,
           isAvailable: true,
         },
       ],
@@ -171,16 +171,15 @@ export interface Cook extends User {
 
 export interface MenuItem {
   id: string
-  cookId: string
-  name: string
+  cook_id: string
+  item_name: string
   description: string
   price: number
-  dietaryType: DietaryType
-  cuisineType: CuisineType
-  mealType: MealType
-  dayOfWeek: number
+  dietary_type: string
+  cuisine_type: string
+  meal_type: string
+  day_of_week: number
   isAvailable: boolean
-  image?: string
 }
 
 export interface Order {

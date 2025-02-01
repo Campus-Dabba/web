@@ -1,6 +1,7 @@
+
 import type { Metadata } from "next"
 
-import { CookProfileForm } from "@/components/cook/profile-form"
+import { CookProfileForm } from "@/components/cook/profile-form-after"
 import { Separator } from "@/components/ui/separator"
 
 export const metadata: Metadata = {

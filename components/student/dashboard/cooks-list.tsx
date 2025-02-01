@@ -23,6 +23,8 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
 import { Cook, MenuItem, CartItem, DayOfWeek, dayMapping } from "@/types";
 import { useState, useEffect } from "react";
+import { NextResponse } from "next/server";
+import { createClient } from "@/utils/supabase/client";
 
 interface CooksListProps {
   selectedState: string;
@@ -45,7 +47,117 @@ const getCurrentDayNumber = (): DayOfWeek => {
 export function CooksList({ selectedState }: CooksListProps) {
   const { cart, addToCart, removeFromCart } = useCart();
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const cooks = cooksByState[selectedState] || [];
+  const staticCooks = cooksByState[selectedState] || [];
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [cooks, setCooks] = useState([]);
+
+  const fetchCooks = async () => {
+    try {
+      setIsLoading(true);
+    const supabase = createClient();
+
+    const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+    if (authError) {
+      console.error("Auth error:", authError);
+      throw authError;
+    }
+    console.log("Anonymous auth successful:", authData);
+
+
+    // Simple query to check all regions first
+    const { data: allRegions } = await supabase
+      .from("cooks")
+      .select("region");
+    
+    console.log("All available regions:", allRegions);
+
+    // Try both exact and partial matches
+    const { data: cooksData, error: cooksError } = await supabase
+      .from("cooks")
+      .select(`
+        id,
+        first_name,
+        last_name,
+        address,
+        rating,
+        certification,
+        profile_image
+      `)
+      .or(`region.eq.${selectedState},region.ilike.%${selectedState}%`);
+
+    console.log("Query params:", selectedState);
+    console.log("Found cooks:", cooksData);
+    
+    if (cooksError) throw cooksError;
+    if (!cooksData?.length) {
+      setError("No cooks found for this location");
+      return;
+    }
+
+      // Fetch menu items with debug logging
+      const cookIds = cooksData.map((cook) => cook.id);
+      console.log("Fetching menu items for cook IDs:", cookIds);
+
+      const { data: menuData, error: menuError } = await supabase
+        .from("dabba_menu")
+        .select(
+          `
+          id,
+          cook_id,
+          item_name,
+          description,
+          price,
+          day_of_week,
+          dietary_type
+        `
+        )
+        .in("cook_id", cookIds);
+
+      console.log("Menu data:", menuData);
+      console.log("Menu error:", menuError);
+
+      if (menuError) throw menuError;
+
+      // Process and set data
+      const mergedCooks = staticCooks.map((staticCook) => {
+        const dynamicCook = cooksData?.find((c) => c.id === staticCook.id);
+        const cookMenuItems = menuData?.filter(
+          (item) => item.cook_id === staticCook.id
+        );
+
+        return {
+          ...staticCook,
+          ...dynamicCook,
+          name: dynamicCook
+            ? `${dynamicCook.first_name} ${dynamicCook.last_name}`
+            : staticCook.name,
+          menuItems: cookMenuItems?.length
+            ? cookMenuItems.map((item) => ({
+                id: item.id,
+                name: item.item_name,
+                description: item.description,
+                price: item.price,
+                dayOfWeek: item.day_of_week,
+                dietaryType: item.dietary_type,
+              }))
+            : staticCook.menuItems,
+        };
+      });
+
+      console.log("Merged cooks:", mergedCooks);
+      setCooks(mergedCooks);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCooks();
+  }, [selectedState]);
 
   useEffect(() => {
     const newQuantities: Record<string, number> = {};
@@ -63,14 +175,11 @@ export function CooksList({ selectedState }: CooksListProps) {
     const currentQty = quantities[itemId] || 0;
     const newQty = Math.max(0, currentQty + change);
 
-   
-
     if (change < 0) {
       handleRemoveFromCart(cook);
       return;
     }
 
-    
     setQuantities((prev) => ({ ...prev, [itemId]: newQty }));
 
     const todayMenu = cook.menuItems.filter(
@@ -97,7 +206,9 @@ export function CooksList({ selectedState }: CooksListProps) {
 
     toast({
       title: "Added to cart",
-      description: `${cook.name}'s ${dayMapping[getCurrentDayNumber()]} Dabba has been added to your cart.`,
+      description: `${cook.name}'s ${
+        dayMapping[getCurrentDayNumber()]
+      } Dabba has been added to your cart.`,
     });
   };
   const handleRemoveFromCart = (cook: CookWithMenu) => {
@@ -120,19 +231,22 @@ export function CooksList({ selectedState }: CooksListProps) {
     }
   };
 
+  if (isLoading) return <div>Loading cooks...</div>;
+  if (error) return <div>Error loading cooks: {error}</div>;
+
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {cooks.map((cook) => (
         <Card key={cook.id} className="flex flex-col">
           <CardHeader>
             <div className="flex items-center gap-4">
-              <AspectRatio ratio={1} className="h-12 w-12 flex-none">
+              <AspectRatio ratio={1} className="h-20 w-20 flex-none">
                 <Image
                   src={cook.profilePicture || "/placeholder-chef.jpg"}
                   alt={cook.name}
-                  className="rounded-full object-cover"
+                  className="rounded-lg object-cover"
                   fill
-                  sizes="48px"
+                  sizes="80px"
                 />
               </AspectRatio>
               <div className="flex-1 space-y-1">

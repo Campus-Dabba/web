@@ -1,5 +1,14 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useImageHandler } from '@/components/ui/use-image-handler';
+
+// Add interface for state images
+interface StateImageMap {
+  [key: string]: string;
+}
+
+
+
 export function StateCards({
   states,
   selectedState,
@@ -10,12 +19,14 @@ export function StateCards({
   onStateSelect: (state: string) => void;
 }) {
   const router = useRouter();
+  const { getImageUrl } = useImageHandler();
+  const [stateImages, setStateImages] = useState<StateImageMap>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollPosition = useRef(0);
   const [isPaused, setIsPaused] = useState(false);
   const animationFrameId = useRef<number>();
-
+  const defaultImageUrl = 'https://ejtjwejiulepzcglswis.supabase.co/storage/v1/object/public/webpage-images//default.avif'
   const startAnimation = () => {
     if (animationFrameId.current) {
       cancelAnimationFrame(animationFrameId.current);
@@ -66,6 +77,23 @@ export function StateCards({
     startAnimation();
   };
 
+  useEffect(() => {
+    const loadImages = async () => {
+      const loadedImages: StateImageMap = {};
+      
+      for (const state of states) {
+        const imageUrl = await getImageUrl(state, 'states');
+        if (imageUrl) {
+          loadedImages[state] = imageUrl;
+        }
+      }
+      
+      setStateImages(loadedImages);
+    };
+    
+    loadImages();
+  }, [states]);
+
   return (
     <div className="w-full overflow-hidden">
       <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent border-b-2 border-orange-400 pb-2">
@@ -95,7 +123,7 @@ export function StateCards({
               <div
                 className="absolute inset-0"
                 style={{
-                  backgroundImage: `url('https://source.unsplash.com/400x200/?${state},landmark')`,
+                  backgroundImage: `url('${stateImages[state] ?? defaultImageUrl}')`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }}
@@ -111,12 +139,19 @@ export function StateCards({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
+                    // Store state info in localStorage
+                    localStorage.setItem("selectedState", state);
+                    localStorage.setItem(
+                      "stateUrl",
+                      state.toLowerCase().replace(" ", "-")
+                    );
+                    // Navigate to state page
                     router.push(
-                      `/states/${state.toLowerCase().replace(" ", "-")}`
+                      `/states`
                     );
                   }}
                   className="px-3 py-1 bg-white/90 text-gray-800 rounded-full text-xs font-medium
-                            hover:bg-white transition-colors duration-200 mt-2"
+            hover:bg-white transition-colors duration-200 mt-2"
                 >
                   View Details
                 </button>

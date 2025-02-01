@@ -73,7 +73,7 @@ const formSchema = z.object({
   password: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
-  profile_picture: z.string().optional(),
+  profile_image: z.string().optional(),
   cuisineType: z.string(),
   description: z.string().min(50, {
     message: "Bio must be at least 50 characters.",
@@ -93,8 +93,8 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export function CookProfileForm() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
   const [imageUrl, setImageUrl] = useState("");
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -110,19 +110,55 @@ export function CookProfileForm() {
     },
   });
   useEffect(() => {
-    const registrationData = localStorage.getItem("registrationData");
-    if (registrationData) {
-      const parsedData = JSON.parse(registrationData);
-      if (parsedData && parsedData.cook_name) {
-        const nameParts = parsedData.cook_name.split(" ");
-        form.setValue("first_name", nameParts[0] || "");
-        form.setValue("last_name", nameParts[1] || "");
+    fetchCookData();
+  }, []);
+
+  const fetchCookData = async () => {
+    try {
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authUser) {
+        const { data: cookData, error: cookError } = await supabase
+          .from("cooks")
+          .select("*")
+          .eq("cook_id", authUser.id)
+          .single();
+
+        if (cookError) throw cookError;
+
+        if (cookData) {
+          form.setValue("first_name", cookData.first_name);
+          form.setValue("last_name", cookData.last_name);
+          form.setValue("email", cookData.email);
+          form.setValue("phone", cookData.phone);
+          form.setValue("street", cookData.address.street);
+          form.setValue("city", cookData.address.city);
+          form.setValue("state", cookData.address.state);
+          form.setValue("profile_image", cookData.profile_image);
+          setImageUrl(cookData.profile_image);
+          form.setValue("pincode", cookData.address.pincode);
+          form.setValue("cuisineType", cookData.cuisineType);
+          form.setValue("description", cookData.description);
+          if (cookData.certification) {
+            setCertifications(cookData.certification);
+            form.setValue("certification", cookData.certification);
+          }
+        }
       }
-      form.setValue("email", parsedData.cook_email);
-      form.setValue("phone", parsedData.cook_phone);
-      form.setValue("password", parsedData.cook_password);
+    } catch (error) {
+      console.error("Error fetching cook data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load cook data",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  }, [form]);
+  };
 
   const addCertification = () => {
     const newCert = {
@@ -157,14 +193,13 @@ export function CookProfileForm() {
       });
     }
   };
-
   const handleLocationSelect = (lat: number, lng: number) => {
     form.setValue("latitude", lat);
     form.setValue("longitude", lng);
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
+    setLoading(true);
 
     try {
       const supabase = await createClient();
@@ -175,7 +210,7 @@ export function CookProfileForm() {
 
       if (!user) throw new Error("No user found");
 
-      let finalImageUrl = values.profile_picture; // Keep existing if no new upload
+      let finalImageUrl = values.profile_image; // Keep existing if no new upload
       if (uploadedImage) {
         const fileExt = uploadedImage.name.split(".").pop();
         const fileName = `${user.id}-${Math.random()}.${fileExt}`;
@@ -192,8 +227,9 @@ export function CookProfileForm() {
         finalImageUrl = publicUrl;
       }
 
-      const { error } = await supabase.from("cooks").upsert(
-        {
+      const { error } = await supabase
+        .from("cooks")
+        .update({
           cook_id: user.id, // Explicitly set the id from auth
           email: values.email,
           first_name: values.first_name,
@@ -211,12 +247,9 @@ export function CookProfileForm() {
           certification: values.certification,
           password: values.password,
           region: values.state,
-        },
-        {
-          onConflict: "id",
-          returning: "minimal",
-        }
-      );
+        })
+        .eq("cook_id", user.id) // Match the existing record using cook_id
+        .single();
 
       if (error) {
         console.error("Update error:", error);
@@ -237,7 +270,7 @@ export function CookProfileForm() {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   }
 
@@ -252,7 +285,7 @@ export function CookProfileForm() {
               <FormItem>
                 <FormLabel>First Name</FormLabel>
                 <FormControl>
-                  <Input {...field} disabled />
+                  <Input {...field} />
                 </FormControl>
               </FormItem>
             )}
@@ -264,7 +297,7 @@ export function CookProfileForm() {
               <FormItem>
                 <FormLabel>Last Name</FormLabel>
                 <FormControl>
-                  <Input {...field} disabled />
+                  <Input {...field} />
                 </FormControl>
               </FormItem>
             )}
@@ -277,7 +310,7 @@ export function CookProfileForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input {...field} disabled />
+                <Input {...field} />
               </FormControl>
             </FormItem>
           )}
@@ -290,16 +323,16 @@ export function CookProfileForm() {
             <FormItem>
               <FormLabel>Phone</FormLabel>
               <FormControl>
-                <Input {...field} disabled />
+                <Input {...field} />
               </FormControl>
             </FormItem>
           )}
         />
 
         <div className="space-y-2">
-          <Label htmlFor="profile-image">Profile Picture</Label>
+          <Label htmlFor="profile_image">Profile Picture</Label>
           <Input
-            id="profile-image"
+            id="profile_image"
             type="file"
             accept="image/*"
             onChange={(event: ChangeEvent<HTMLInputElement>) => {
@@ -359,6 +392,7 @@ export function CookProfileForm() {
                 <FormLabel>State</FormLabel>
                 <Select
                   onValueChange={field.onChange}
+                  value={field.value}
                   defaultValue={field.value}
                 >
                   <FormControl>
@@ -511,8 +545,8 @@ export function CookProfileForm() {
           ))}
         </div>
 
-        <Button type="submit" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        <Button type="submit" disabled={loading}>
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Save Profile
         </Button>
       </form>

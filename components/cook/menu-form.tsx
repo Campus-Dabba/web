@@ -1,17 +1,59 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2 } from "lucide-react"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
+import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { createClient } from "@/utils/supabase/client";
 
-import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { toast } from "@/components/ui/use-toast"
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/use-toast";
+
+interface MenuFormProps {
+  initialData?: MenuItem;
+  onSuccess: () => void;
+  isEditing?: boolean;
+}
+
+const DAY_MAPPING: Record<string, string> = {
+  "1": "Monday",
+  "2": "Tuesday",
+  "3": "Wednesday",
+  "4": "Thursday",
+  "5": "Friday",
+  "6": "Saturday",
+  "7": "Sunday",
+};
+
+interface MenuItem {
+  id?: string;
+  cook_id: string;
+  item_name: string;
+  description: string;
+  price: number;
+  meal_type: string;
+  dietary_type: string;
+  day_of_week: string;
+}
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -23,48 +65,111 @@ const formSchema = z.object({
   price: z.string().regex(/^\d+(\.\d{1,2})?$/, {
     message: "Please enter a valid price.",
   }),
-  mealType: z.string(),
-  dietaryType: z.string(),
+  mealType: z.enum(["breakfast", "lunch", "dinner"]), // Add proper enum values
+  dietaryType: z.enum(["veg", "non-veg"]),
   dayOfWeek: z.string(),
-})
+});
 
-export function MenuForm() {
-  const [isLoading, setIsLoading] = useState(false)
+export function MenuForm({ initialData, onSuccess, isEditing }: MenuFormProps) {
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      price: "",
-      mealType: "lunch",
-      dietaryType: "veg",
-      dayOfWeek: "1",
+      name: initialData?.item_name || "",
+      description: initialData?.description || "",
+      price: initialData?.price?.toString() || "",
+      mealType: initialData?.meal_type || "lunch",
+      dietaryType: initialData?.dietary_type || "veg",
+      dayOfWeek: Object.keys(DAY_MAPPING).find(key => DAY_MAPPING[key as keyof typeof DAY_MAPPING] === initialData?.day_of_week) || "1",
     },
-  })
+  });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
-      // Here we would typically make an API call to add the menu item
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const supabase = createClient();
+      if (isEditing && initialData) {
+        const { error } = await supabase
+          .from("dabba_menu")
+          .update({
+            item_name: values.name,
+            description: values.description,
+            price: parseFloat(values.price),
+            meal_type: values.mealType.toLowerCase(),
+            dietary_type: values.dietaryType.toLowerCase(),
+            day_of_week: DAY_MAPPING[values.dayOfWeek],
+          })
+          .eq("id", initialData.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "Dabba edited successfully",
+        });
+
+
+      }
+      else {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) throw new Error("No user found");
+
+      const dayOfWeek =
+        DAY_MAPPING[values.dayOfWeek as keyof typeof DAY_MAPPING];
+
+      const menuItem = {
+        cook_id: user.id,
+        item_name: values.name,
+        description: values.description,
+        price: parseFloat(values.price),
+        meal_type: values.mealType.toLowerCase(),
+        dietary_type: values.dietaryType.toLowerCase(),
+        day_of_week: DAY_MAPPING[values.dayOfWeek] || "Monday",
+      };
+
+      // Add validation before insert
+      if (!Object.values(DAY_MAPPING).includes(menuItem.day_of_week)) {
+        throw new Error(`Invalid day: ${menuItem.day_of_week}`);
+      }
+
+      // Debug final payload
+      console.log("Final payload:", menuItem);
+
+      const { error } = await supabase.from("dabba_menu").insert([menuItem]).select();
+
+      if (error) throw error;
 
       toast({
-        title: "Menu item added!",
-        description: "Your menu item has been successfully added.",
-      })
+        title: "Success",
+        description: "Dabba added successfully",
+      });
 
-      form.reset()
-    } catch (error) {
-      toast({
-        title: "Something went wrong.",
-        description: "Please try again later.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+      form.reset();
+
     }
+      onSuccess();
+      
+
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to add dabba",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+  const [selectedItem, setSelectedItem] = useState<MenuItem | undefined>(undefined);
+  function handleItemSelect(item: MenuItem | null) {
+    setSelectedItem(item || undefined);
   }
 
   return (
@@ -90,7 +195,11 @@ export function MenuForm() {
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea placeholder="Describe your dish" className="resize-none" {...field} />
+                <Textarea
+                  placeholder="Describe your dish"
+                  className="resize-none"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -103,7 +212,12 @@ export function MenuForm() {
             <FormItem>
               <FormLabel>Price</FormLabel>
               <FormControl>
-                <Input placeholder="99.99" type="number" step="0.01" {...field} />
+                <Input
+                  placeholder="99.99"
+                  type="number"
+                  step="0.01"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -116,7 +230,10 @@ export function MenuForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Meal Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select meal type" />
@@ -138,7 +255,10 @@ export function MenuForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Dietary Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select dietary type" />
@@ -160,20 +280,29 @@ export function MenuForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Day of Week</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select day" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(
-                      (day, index) => (
-                        <SelectItem key={day} value={String(index + 1)}>
-                          {day}
-                        </SelectItem>
-                      ),
-                    )}
+                    {[
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday",
+                      "Sunday",
+                    ].map((day, index) => (
+                      <SelectItem key={day} value={String(index + 1)}>
+                        {day}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -187,6 +316,5 @@ export function MenuForm() {
         </Button>
       </form>
     </Form>
-  )
+  );
 }
-

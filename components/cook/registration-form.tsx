@@ -74,7 +74,7 @@ export function CookRegistrationForm() {
         cook_name: values.name,
         cook_email: values.email,
         cook_phone: values.phone,
-        cook_passsword: values.password,
+        cook_password: values.password,
       };
       localStorage.setItem(
         "registrationData",

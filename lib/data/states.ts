@@ -2,17 +2,32 @@ import type { Cook, MenuItem } from "@/types"
 
 export const states = [
   "All States",
-  "Maharashtra",
-  "Delhi",
-  "Karnataka",
-  "Tamil Nadu",
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Goa",
   "Gujarat",
-  "Telangana",
-  "West Bengal",
-  "Uttar Pradesh",
-  "Rajasthan",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
   "Kerala",
-]
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Tamil Nadu",
+  "Telangana",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+];
 
 export type State = (typeof states)[number]
 

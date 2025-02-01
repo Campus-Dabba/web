@@ -1,6 +1,7 @@
 "use client";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 import { CooksList } from "@/components/student/dashboard/cooks-list";
 import { StatesFilter } from "@/components/student/dashboard/states-filter";
 import { states } from "@/lib/data/states";
@@ -9,6 +10,30 @@ import { MapPreview } from "@/components/map/map-preview";
 
 export default function DashboardPage() {
   const [selectedState, setSelectedState] = useState<string>(states[0]);
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        // Check if user is a cook
+        const { data: cook } = await supabase
+          .from("cooks")
+          .select("*")
+          .eq("cook_id", session.user.id)
+          .single();
+
+        if (cook) {
+          router.push("/cook/dashboard");
+          return;
+        }
+      }
+    };
+
+    checkUserRole();
+  }, [router]);
 
   return (
     <div className="space-y-6">
