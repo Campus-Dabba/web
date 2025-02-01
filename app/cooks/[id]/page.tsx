@@ -129,11 +129,6 @@ export default function CookProfilePage({
         setIsLoading(true);
         const supabase = createClient();
 
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.signInAnonymously()
-
         if (sessionError) {
           console.error("Session error:", sessionError);
           throw sessionError;

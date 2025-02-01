@@ -57,13 +57,7 @@ export function CooksList({ selectedState }: CooksListProps) {
       setIsLoading(true);
     const supabase = createClient();
 
-    const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
-    if (authError) {
-      console.error("Auth error:", authError);
-      throw authError;
-    }
-    console.log("Anonymous auth successful:", authData);
-
+    
 
     // Simple query to check all regions first
     const { data: allRegions } = await supabase
