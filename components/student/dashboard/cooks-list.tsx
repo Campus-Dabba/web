@@ -313,36 +313,41 @@ export function CooksList({ selectedState }: CooksListProps) {
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {cooks.map((cook) => (
         <Card key={cook.cook_id} className="flex flex-col">
-          <CardHeader>
-            <div className="flex items-center gap-4">
-              <AspectRatio ratio={1} className="h-20 w-20 flex-none">
-                <Image
-                  src={cook.profile_image || "/placeholder-chef.jpg"}
-                  alt={cook.first_name}
-                  className="rounded-lg object-cover"
-                  fill
-                  sizes="80px"
-                />
-              </AspectRatio>
-              <div className="flex-1 space-y-1">
-                <CardTitle className="text-lg">
-                  <Link href={`/cooks/${cook.id}`} className="hover:underline">
-                    {cook.first_name}
-                  </Link>
-                </CardTitle>
-                <CardDescription>
-                  {cook.address
-                    ? formatAddress(cook.address)
-                    : "Address not available"}
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-sm">
-                <Star className="h-4 w-4 fill-primary text-primary" />
-                <span>{cook.rating}</span>
+          <CardHeader className="relative min-h-[200px] flex flex-col justify-end p-6 text-white">
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{
+                backgroundImage: `url(${
+                  cook.profile_image || "/placeholder-chef.jpg"
+                })`,
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-black/20" />
+            <div className="relative z-10">
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-lg">
+                    <Link
+                      href={`/cooks/${cook.id}`}
+                      className="hover:underline"
+                    >
+                      {cook.first_name}
+                    </Link>
+                  </CardTitle>
+                  <CardDescription className="text-gray-200">
+                    {cook.address
+                      ? formatAddress(cook.address)
+                      : "Address not available"}
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-1 rounded-full bg-white/20 backdrop-blur px-2 py-1 text-sm">
+                  <Star className="h-4 w-4 fill-white text-white" />
+                  <span>{cook.rating}</span>
+                </div>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="flex-grow p-6">
+          <CardContent className="pt-2 px-6 pb-1">
             <div className="flex gap-2">
               <Badge variant="secondary">{cook.totalOrders}+ orders</Badge>
               {cook.certification && (
