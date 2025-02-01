@@ -106,22 +106,30 @@ export function CooksList({ selectedState }: CooksListProps) {
 
       console.log("All available regions:", allRegions);
 
-      // Try both exact and partial matches
-      const { data: cooksData, error: cooksError } = await supabase
+      let cooksQuery = supabase
         .from("cooks")
-        .select(
-          `
-        id,
-        cook_id,
-        first_name,
-        last_name,
-        address,
-        rating,
-        certification,
-        profile_image
-      `
-        )
-        .or(`region.eq.${selectedState},region.ilike.%${selectedState}%`);
+        .select(`
+          id,
+          cook_id,
+          first_name,
+          last_name,
+          address,
+          rating,
+          certification,
+          profile_image
+        `);
+
+      // Try both exact and partial matches
+      // If not "All States", apply region filter
+      if (selectedState !== "All States") {
+        cooksQuery = cooksQuery.or(`region.eq.${selectedState},region.ilike.%${selectedState}%`);
+      } else {
+        cooksQuery = cooksQuery;
+      }
+
+      const { data: cooksData, error: cooksError } = await cooksQuery;
+
+      console.log("Query params:", selectedState);
 
       console.log("Query params:", selectedState);
       console.log("Found cooks:", cooksData);

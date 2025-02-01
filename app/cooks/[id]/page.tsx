@@ -25,13 +25,17 @@ import { createClient } from "@/utils/supabase/client";
 
 interface CartItem {
   id: string;
-  cookId: string;
-  name: string;
+  cook_id: string;
+  first_name: string;
+  last_name: string;
+  item_name: string;
   description: string;
   price: number;
-  dietaryType: "veg" | "non-veg" | "vegan";
-  mealType: "breakfast" | "lunch" | "dinner";
-  dayOfWeek: string;
+  dietary_type: "veg" | "non-veg" | "vegan";
+  meal_type: "breakfast" | "lunch" | "dinner";
+  day_of_week: number;
+  cuisine_type: "indian" | "chinese" | "italian" | "mexican" | "thai" | "other";
+  isAvailable: boolean;
   quantity: number;
 }
 
@@ -92,7 +96,7 @@ export default function CookProfilePage({
 
     setQuantities((prev) => ({ ...prev, [itemId]: newQty }));
 
-    const dayMenu = cook.menuItems.filter((item) => item.dayOfWeek === day);
+    const dayMenu = cook.menuItems.filter((item) => item.day_of_week === day);
 
     const bundledMenu: CartItem = {
       id: itemId,
@@ -100,10 +104,10 @@ export default function CookProfilePage({
       name: `${cook.name}'s ${dayMapping[day as DayOfWeek]} Dabba`,
       description: `${dayMapping[day as DayOfWeek]}'s special dabba`,
       price: dayMenu.reduce((total, item) => total + item.price, 0),
-      dietaryType: dayMenu[0]?.dietaryType || "veg",
-      cuisineType: dayMenu[0]?.cuisineType || "indian",
-      mealType: "lunch",
-      dayOfWeek: day, 
+      dietary_type: dayMenu[0]?.dietary_type || "veg",
+      cuisine_type: dayMenu[0]?.cuisine_type || "indian",
+      meal_type: "lunch",
+      day_of_week: day, 
       isAvailable: true,
       quantity: newQty,
       menuItems: dayMenu,
@@ -139,6 +143,7 @@ export default function CookProfilePage({
       try {
         setIsLoading(true);
         const supabase = createClient();
+        const [sessionError, setSessionError] = useState<string | null>(null);
 
         if (sessionError) {
           console.error("Session error:", sessionError);
@@ -172,10 +177,13 @@ export default function CookProfilePage({
         };
 
         setCookData(mergedCook);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          console.error(err.message);
+      } else {
+        console.error('An unknown error occurred');
+      }
+      setIsLoading(false);
       }
     };
 
@@ -287,8 +295,8 @@ export default function CookProfilePage({
                       <h3 className="text-xl font-bold">Today's Dabba</h3>
                       <Badge variant="secondary">
                         {cook.menuItems.find(
-                          (item) => item.dayOfWeek === getCurrentDayNumber()
-                        )?.dietaryType || "veg"}
+                          (item) => item.day_of_week === getCurrentDayNumber()
+                        )?.dietary_type || "veg"}
                       </Badge>
                     </div>
 
@@ -296,7 +304,7 @@ export default function CookProfilePage({
                       <div className="space-y-2">
                         {cook.menuItems
                           .filter(
-                            (item) => item.dayOfWeek === getCurrentDayNumber()
+                            (item) => item.day_of_week === getCurrentDayNumber()
                           )
                           .map((item) => (
                             <div
@@ -304,7 +312,7 @@ export default function CookProfilePage({
                               className="flex justify-between items-start border-b pb-2"
                             >
                               <div>
-                                <h4 className="font-medium">{item.name}</h4>
+                                <h4 className="font-medium">{item.item_name}</h4>
                                 <p className="text-sm text-muted-foreground">
                                   {item.description}
                                 </p>
@@ -321,7 +329,7 @@ export default function CookProfilePage({
                         Total: ₹
                         {cook.menuItems
                           .filter(
-                            (item) => item.dayOfWeek === getCurrentDayNumber()
+                            (item) => item.day_of_week === getCurrentDayNumber()
                           )
                           .reduce((total, item) => total + item.price, 0)}
                       </div>
@@ -379,7 +387,7 @@ export default function CookProfilePage({
                           className="w-[200px]"
                           onClick={() => {
                             const dayMenu = cook.menuItems.filter(
-                              (item) => item.dayOfWeek === Number(day)
+                              (item) => item.day_of_week === Number(day)
                             );
                             const bundledMenu: CartItem = {
                               id: `${cook.id}-${day}`,
@@ -390,10 +398,10 @@ export default function CookProfilePage({
                                 (total, item) => total + item.price,
                                 0
                               ),
-                              dietaryType: dayMenu[0]?.dietaryType || "veg",
-                              cuisineType: dayMenu[0]?.cuisineType || "indian",
-                              mealType: dayMenu[0]?.mealType || "lunch",
-                              dayOfWeek: Number(day) as DayOfWeek,
+                              dietary_type: dayMenu[0]?.dietary_type || "veg",
+                              cuisine_type: dayMenu[0]?.cuisine_type || "indian",
+                              meal_type: dayMenu[0]?.meal_type || "lunch",
+                              day_of_week: Number(day) as DayOfWeek,
                               isAvailable: true,
                               quantity: 1,
                               menuItems: dayMenu,
@@ -450,8 +458,8 @@ export default function CookProfilePage({
                             </h3>
                             <Badge variant="secondary">
                               {cook.menuItems.find(
-                                (item) => item.dayOfWeek === Number(day)
-                              )?.dietaryType || "veg"}
+                                (item) => item.day_of_week === Number(day)
+                              )?.dietary_type || "veg"}
                             </Badge>
                           </div>
 
@@ -459,7 +467,7 @@ export default function CookProfilePage({
                             <div className="space-y-2">
                               {cook.menuItems
                                 .filter(
-                                  (item) => item.dayOfWeek === Number(day)
+                                  (item) => item.day_of_week === Number(day)
                                 )
                                 .map((item) => (
                                   <div
@@ -468,7 +476,7 @@ export default function CookProfilePage({
                                   >
                                     <div>
                                       <h4 className="font-medium">
-                                        {item.name}
+                                        {item.item_name}
                                       </h4>
                                       <p className="text-sm text-muted-foreground">
                                         {item.description}
@@ -488,7 +496,7 @@ export default function CookProfilePage({
                               Total: ₹
                               {cook.menuItems
                                 .filter(
-                                  (item) => item.dayOfWeek === Number(day)
+                                  (item) => item.day_of_week === Number(day)
                                 )
                                 .reduce((total, item) => total + item.price, 0)}
                             </div>
@@ -540,7 +548,7 @@ export default function CookProfilePage({
                                 className="w-[200px]"
                                 onClick={() => {
                                   const dayMenu = cook.menuItems.filter(
-                                    (item) => item.dayOfWeek === Number(day)
+                                    (item) => item.day_of_week === Number(day)
                                   );
                                   const bundledMenu: CartItem = {
                                     id: `${cook.id}-${day}`,
@@ -551,12 +559,12 @@ export default function CookProfilePage({
                                       (total, item) => total + item.price,
                                       0
                                     ),
-                                    dietaryType:
-                                      dayMenu[0]?.dietaryType || "veg",
-                                    cuisineType:
-                                      dayMenu[0]?.cuisineType || "indian",
-                                    mealType: dayMenu[0]?.mealType || "lunch",
-                                    dayOfWeek: Number(day) as DayOfWeek,
+                                    dietary_type:
+                                      dayMenu[0]?.dietary_type || "veg",
+                                    cuisine_type:
+                                      dayMenu[0]?.cuisine_type || "indian",
+                                    mealType: dayMenu[0]?.meal_type || "lunch",
+                                    day_of_week: Number(day) as DayOfWeek,
                                     isAvailable: true,
                                     quantity: 1,
                                     menuItems: dayMenu,
