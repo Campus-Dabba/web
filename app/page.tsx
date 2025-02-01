@@ -65,7 +65,7 @@ export default function DashboardPage() {
       />
 
       <div className="px-6">
-        <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent border-b-2 border-orange-400 pb-2">
+        <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-orange-400 to-orange-300 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent border-b-2 border-orange-300 dark:border-blue-300 pb-2">
           Households nearby you
         </h2>
       </div>
@@ -76,7 +76,7 @@ export default function DashboardPage() {
       />
       <CooksList selectedState={selectedState} />
       <div className="px-6">
-        <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-orange-600 to-orange-400 bg-clip-text text-transparent border-b-2 border-orange-400 pb-2">
+        <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-orange-400 to-orange-300 dark:from-blue-400 dark:to-blue-300 bg-clip-text text-transparent border-b-2 border-orange-300 dark:border-blue-300 pb-2">
           Dabba Providers near you
         </h2>
       </div>

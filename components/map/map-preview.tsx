@@ -15,9 +15,9 @@ export function MapPreview({ address, latitude, longitude }: MapPreviewProps) {
     lat: latitude || 15.4577,  // Dharwad, Karnataka (default)
     lng: longitude || 75.0078,
   }
-
+  const zoomLevel = 0.001;
   // Static map URL using OpenStreetMap
-  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${defaultCoordinates.lng - 0.01},${defaultCoordinates.lat - 0.01},${defaultCoordinates.lng + 0.01},${defaultCoordinates.lat + 0.01}&layer=mapnik`
+  const mapUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${defaultCoordinates.lng - 0.00001},${defaultCoordinates.lat - 0.00001},${defaultCoordinates.lng + 0.00001},${defaultCoordinates.lat + 0.00001}&layer=mapnik&zoom=18`
 
   return (
     <div className="space-y-2"> 
