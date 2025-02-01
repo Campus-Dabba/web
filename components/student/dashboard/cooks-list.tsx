@@ -61,9 +61,10 @@ interface CartOperationResult {
   message: string;
 }
 
-const getCurrentDayNumber = (): DayOfWeek => {
-  const day = new Date().getDay();
-  return (day === 0 ? 7 : day) as DayOfWeek;
+const getCurrentDayNumber = () => {
+  const today = new Date();
+  const day = today.getDay() || 7; // Convert Sunday (0) to 7
+  return dayMapping[day]; // Returns day name
 };
 
 export function CooksList({ selectedState }: CooksListProps) {
@@ -274,6 +275,40 @@ export function CooksList({ selectedState }: CooksListProps) {
     return `${address.street}, ${address.city}, ${address.state} ${address.pincode}`;
   };
 
+  const MenuItems = ({ cook, currentDay }) => {
+    console.log("Current day:", currentDay);
+    console.log("Menu items:", cook.menuItems);
+    console.log("Day of week from item:", cook.menuItems[0]?.day_of_week);
+
+    return (
+      <ScrollArea className="h-48">
+        <div className="space-y-2 border border-primary p-2 rounded-md">
+          {cook.menuItems
+            .filter((item) => {
+              console.log(`Comparing ${item.day_of_week} with ${currentDay}`);
+              return item.day_of_week === currentDay;
+            })
+            .map((item) => (
+              <div key={item.id} className="mb-4 p-2 border-b last:border-0">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h5 className="font-semibold">{item.item_name}</h5>
+                    <p className="text-sm text-gray-600">{item.description}</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant="secondary">₹{item.price}</Badge>
+                    <Badge variant="outline" className="ml-2">
+                      {item.dietary_type}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
+      </ScrollArea>
+    );
+  };
+
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {cooks.map((cook) => (
@@ -329,14 +364,26 @@ export function CooksList({ selectedState }: CooksListProps) {
                         (item) => item.day_of_week === getCurrentDayNumber()
                       )
                       .map((item) => (
-                        <div key={item.id} className="text-sm">
-                          <div className="flex justify-between">
-                            <span>{item.item_name}</span>
-                            <span>₹{item.price}</span>
+                        <div
+                          key={item.id}
+                          className="mb-4 p-2 border-b last:border-0"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h5 className="font-semibold">
+                                {item.item_name}
+                              </h5>
+                              <p className="text-sm text-gray-600">
+                                {item.description}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <Badge variant="secondary">₹{item.price}</Badge>
+                              <Badge variant="outline" className="ml-2">
+                                {item.dietary_type}
+                              </Badge>
+                            </div>
                           </div>
-                          <p className="text-muted-foreground">
-                            {item.description}
-                          </p>
                         </div>
                       ))}
                   </div>
