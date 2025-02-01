@@ -80,6 +80,11 @@ npm run dev
 
 ---
 
+## Github repo link for the monile code 
+
+https://github.com/Campus-Dabba/campus_dabba_mobile
+
+
 ## 🌟 Future Enhancements  
 ✅ AI-powered meal recommendations  
 ✅ User feedback & rating system  
@@ -93,6 +98,8 @@ npm run dev
 **Solution:** A **dynamic**, AI-driven platform connecting them to local home cooks while ensuring **personalized, high-quality meals** through limited batch serving.  
 
 ---
+
+
 
 **📢 Join the Movement!**  
 Contribute, suggest features, or become a cook! 🎉  
