@@ -462,3 +462,4 @@ export function CooksList({ selectedState }: CooksListProps) {
   }
 }
 
+export default CooksList;
