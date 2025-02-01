@@ -80,7 +80,7 @@ npm run dev
 
 ---
 
-## Github repo link for the monile code 
+## Github repo link for the mobile code 
 
 https://github.com/Campus-Dabba/campus_dabba_mobile
 
