@@ -13,7 +13,6 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Cook,
   MenuItem,
-  CartItem,
   dayMapping,
   WeeklySchedule,
   DayOfWeek,
@@ -23,6 +22,18 @@ import { Plus, Minus } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
 // Add these helper functions before the component
+
+interface CartItem {
+  id: string;
+  cookId: string;
+  name: string;
+  description: string;
+  price: number;
+  dietaryType: "veg" | "non-veg" | "vegan";
+  mealType: "breakfast" | "lunch" | "dinner";
+  dayOfWeek: string;
+  quantity: number;
+}
 
 const { toast } = useToast();
 
@@ -92,7 +103,7 @@ export default function CookProfilePage({
       dietaryType: dayMenu[0]?.dietaryType || "veg",
       cuisineType: dayMenu[0]?.cuisineType || "indian",
       mealType: "lunch",
-      dayOfWeek: day,
+      dayOfWeek: day, 
       isAvailable: true,
       quantity: newQty,
       menuItems: dayMenu,

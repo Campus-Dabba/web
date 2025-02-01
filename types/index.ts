@@ -157,6 +157,7 @@ export interface User {
 }
 
 export interface Cook extends User {
+  cook_id: string
   userrole: "cook"
   description: string
   address: string
@@ -168,6 +169,8 @@ export interface Cook extends User {
   isAvailable: boolean
   weeklySchedule?: WeeklySchedule
 }
+
+
 
 export interface MenuItem {
   id: string
