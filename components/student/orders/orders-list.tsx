@@ -1,87 +1,135 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { format } from "date-fns"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { createClient } from "@/utils/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-
-// Mock data for orders
-const mockOrders = [
-  {
-    id: "1",
-    cookName: "Maria Garcia",
-    date: new Date(),
-    status: "Delivered",
-    items: [
-      { name: "Butter Chicken", quantity: 1, price: 250 },
-      { name: "Naan", quantity: 2, price: 30 },
-    ],
-    total: 310,
-  },
-  {
-    id: "2",
-    cookName: "John Smith",
-    date: new Date(Date.now() - 86400000), // Yesterday
-    status: "In Progress",
-    items: [
-      { name: "Vegetable Biryani", quantity: 1, price: 180 },
-      { name: "Raita", quantity: 1, price: 40 },
-    ],
-    total: 220,
-  },
-]
+interface CookOrder {
+  id: string;
+  cook_id: string;
+  total_orders: number;
+  pending_orders: number;
+  completed_orders: number;
+  earnings: number;
+  cook?: {
+    first_name: string;
+    last_name: string;
+  };
+}
 
 export function OrdersList() {
-  const [openOrder, setOpenOrder] = useState<string | null>(null)
+  const [orders, setOrders] = useState<CookOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    const supabase = createClient();
+    try {
+      setLoading(true);
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authUser) {
+      const { data, error } = await supabase.from("cook_orders").select(`
+          *,
+          cook:cooks(first_name, last_name)
+        `)
+        .eq("cook_id", authUser.id)
+          .single();
+
+      if (error) throw error;
+      setOrders(data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      setError("Failed to load orders");
+      toast({
+        title: "Error",
+        description: "Could not load orders",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center p-4">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500">{error}</div>;
+  }
 
   return (
     <div className="space-y-4">
-      {mockOrders.map((order) => (
-        <Collapsible
-          key={order.id}
-          open={openOrder === order.id}
-          onOpenChange={() => setOpenOrder(openOrder === order.id ? null : order.id)}
-        >
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Order #{order.id}</CardTitle>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    {openOrder === order.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  </Button>
-                </CollapsibleTrigger>
+      {orders.map((order) => (
+        <Card key={order.id}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>
+                  {order.cook?.first_name} {order.cook?.last_name}
+                </CardTitle>
+                <CardDescription>Order Summary</CardDescription>
               </div>
-              <CardDescription>
-                {format(order.date, "PPP")} - {order.status}
-              </CardDescription>
-            </CardHeader>
-            <CollapsibleContent>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="font-medium">Items:</p>
-                  {order.items.map((item, index) => (
-                    <div key={index} className="flex justify-between text-sm">
-                      <span>
-                        {item.quantity}x {item.name}
-                      </span>
-                      <span>₹{item.price * item.quantity}</span>
-                    </div>
-                  ))}
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium">Total Orders</p>
+                  <p className="text-2xl font-bold">{order.total_orders}</p>
                 </div>
-              </CardContent>
-            </CollapsibleContent>
-            <CardFooter className="flex justify-between">
-              <span className="font-medium">Total:</span>
-              <span className="font-bold">₹{order.total}</span>
-            </CardFooter>
-          </Card>
-        </Collapsible>
+                <div>
+                  <p className="text-sm font-medium">Pending</p>
+                  <p className="text-2xl font-bold">{order.pending_orders}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Completed</p>
+                  <p className="text-2xl font-bold">{order.completed_orders}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Earnings</p>
+                  <p className="text-2xl font-bold">₹{order.earnings}</p>
+                </div>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
       ))}
     </div>
-  )
+  );
 }
-

@@ -10,6 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Home, MapPin } from "lucide-react"
 
 type AddressData = {
   street: string;
