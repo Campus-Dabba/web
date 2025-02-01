@@ -209,66 +209,67 @@ export default function CookProfilePage({
 
   // Add getCartItemId helper
   const getCartItemId = (cookId: string, day: number) => `${cookId}-${day}`;
+const handleQuantityChange = async (day: number, change: number) => {
+  if (!cook) return;
 
-  const handleQuantityChange = async (day: number, change: number) => {
-    if (!cook) return;
-  
-    const itemId = getCartItemId(cook.cook_id, day);
-    const currentQty = quantities[itemId] || 0;
-    const newQty = currentQty + change;
-  
-    if (newQty <= 0) {
-      handleRemoveFromCart(day);
-      return;
-    }
-  
-    const dayMenu = cook.menuItems.filter(
-      (item) => getDayNumber(item.day_of_week) === day
-    );
-  
-    const bundledMenu: CartItem = {
-      id: itemId,
-      cook_id: cook.cook_id,
-      item_name: `${cook.first_name}'s ${dayNames[day]} Dabba`,
-      description: `${dayNames[day]}'s special dabba`,
-      price: dayMenu.reduce((total, item) => total + (item.price || 0), 0),
-      dietary_type: dayMenu[0]?.dietary_type || "veg",
-      cuisine_type: cook.cuisineType || "indian",
-      meal_type: dayMenu[0]?.meal_type || "lunch",
-      day_of_week: day,
-      isAvailable: true,
-      quantity: newQty,
-      menuItems: dayMenu,
-    };
-  
-    addToCart(bundledMenu);
-    setQuantities((prev) => ({ ...prev, [itemId]: newQty }));
-  
-    toast({
-      title: change > 0 ? "Added to cart" : "Updated cart",
-      description: `${cook.first_name}'s ${dayNames[day]} Dabba has been ${
-        change > 0 ? "added to" : "updated in"
-      } your cart.`,
-    });
-  };
-  
-  const handleRemoveFromCart = (day: number) => {
-    if (!cook) return;
-    const itemId = getCartItemId(cook.cook_id, day);
-    removeFromCart(itemId);
-    setQuantities((prev) => {
-      const newQuantities = { ...prev };
-      delete newQuantities[itemId];
-      return newQuantities;
-    });
-  
-    toast({
-      title: "Removed from cart",
-      description: `${cook.first_name}'s ${dayNames[day]} Dabba has been removed from your cart.`,
-    });
+  const itemId = getCartItemId(cook.id, day); // Use cook.cook_id instead of cook.id
+  const currentQty = quantities[itemId] || 0;
+  const newQty = Math.max(0, currentQty + change);
+
+  if (newQty <= 0) {
+    handleRemoveFromCart(day);
+    return;
+  }
+
+  setQuantities((prev) => ({ ...prev, [itemId]: newQty }));
+
+  const dayMenu = cook.menuItems.filter(
+    (item) => getDayNumber(item.day_of_week) === day
+  );
+
+  const bundledMenu: CartItem = {
+    id: itemId,
+    cook_id: cook.cook_id,
+    item_name: `${cook.first_name}'s ${dayNames[day]} Dabba`,
+    description: `${dayNames[day]}'s special dabba`,
+    price: dayMenu.reduce((total, item) => total + (item.price || 0), 0),
+    dietary_type: dayMenu[0]?.dietary_type || "veg",
+    cuisine_type: cook.cuisineType || "indian",
+    meal_type: dayMenu[0]?.meal_type || "lunch",
+    day_of_week: day.toString(), // Ensure day is a string
+    isAvailable: true,
+    quantity: newQty,
+    menuItems: dayMenu,
   };
 
-  
+  addToCart(bundledMenu);
+  setQuantities((prev) => ({ ...prev, [itemId]: newQty }));
+
+  toast({
+    title: change > 0 ? "Added to cart" : "Updated cart",
+    description: `${cook.first_name}'s ${dayNames[day]} Dabba has been ${
+      change > 0 ? "added to" : "updated in"
+    } your cart.`,
+  });
+};
+
+const handleRemoveFromCart = (day: number) => {
+  if (!cook) return;
+  const itemId = getCartItemId(cook.id, day); // Use cook.cook_id instead of cook.id
+  removeFromCart(itemId);
+  setQuantities((prev) => {
+    const newQuantities = { ...prev };
+    delete newQuantities[itemId];
+    return newQuantities;
+  });
+
+  toast({
+    title: "Removed from cart",
+    description: `${cook.first_name}'s ${dayNames[day]} Dabba has been removed from your cart.`,
+  });
+};
+
+
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   if (!cook) return <div>Cook not found</div>;
@@ -424,10 +425,7 @@ export default function CookProfilePage({
                                 size="icon"
                                 variant="outline"
                                 onClick={() =>
-                                  handleQuantityChange(
-                                    getCurrentDayNumber(),
-                                    -1
-                                  )
+                                  handleRemoveFromCart(getCurrentDayNumber())
                                 }
                               >
                                 <Minus className="h-4 w-4" />
@@ -496,7 +494,7 @@ export default function CookProfilePage({
                             }));
                             toast({
                               title: "Added to cart",
-                              description: `${dayNames}'s Dabba has been added to your cart.`,
+                              description:  `${dayNames[selectedDay]}'s Dabba has been added to your cart.`,
                             });
                           }}
                         >
@@ -598,7 +596,7 @@ export default function CookProfilePage({
                                       size="icon"
                                       variant="outline"
                                       onClick={() =>
-                                        handleQuantityChange(Number(day), -1)
+                                        handleRemoveFromCart(Number(day))
                                       }
                                     >
                                       <Minus className="h-4 w-4" />
@@ -667,7 +665,7 @@ export default function CookProfilePage({
                                     [`${cook.id}-${day}`]: 1,
                                   }));
                                   toast({
-                                    title: "Added to cart",
+                                    title: " Added to cart",
                                     description: `${dayName}'s Dabba has been added to your cart.`,
                                   });
                                 }}

@@ -34,6 +34,10 @@ interface Address {
   pincode: string;
 }
 
+const getRandomNumber = (min: number, max: number): number => {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
 export interface Cook {
   id: string;
   cook_id: string;
@@ -183,7 +187,7 @@ export function CooksList({ selectedState }: CooksListProps) {
           .reduce((total, item) => total + item.price, 0),
         profile_image: cook.profile_image,
         certification: cook.certification,
-        totalOrders: 0,
+        totalOrders: getRandomNumber(50, 100) ,
         menuItems:
           menuData?.filter((item) => item.cook_id === cook.cook_id) || [],
       }));
@@ -254,7 +258,7 @@ export function CooksList({ selectedState }: CooksListProps) {
     toast({
       title: "Added to cart",
       description: `${cook.first_name}'s ${
-        dayMapping[getCurrentDayNumber()]
+        [getCurrentDayNumber()]
       } Dabba has been added to your cart.`,
     });
   };
@@ -265,7 +269,7 @@ export function CooksList({ selectedState }: CooksListProps) {
       toast({
         title: "Removed from cart",
         description: `${cook.first_name}'s ${
-          dayMapping[getCurrentDayNumber()]
+          [getCurrentDayNumber()]
         } Dabba has been removed from your cart.`,
       });
     } catch (error) {

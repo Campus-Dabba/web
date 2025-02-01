@@ -8,6 +8,24 @@ import { useToast } from "@/components/ui/use-toast";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/components/providers/cart-provider";
+import { dayMapping } from "@/types";
+import { Badge } from "@/components/ui/badge";
+
+type DayOfWeek = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+const dayNames: Record<DayOfWeek, string> = {
+  1: "Monday",
+  2: "Tuesday",
+  3: "Wednesday",
+  4: "Thursday",
+  5: "Friday",
+  6: "Saturday",
+  7: "Sunday",
+};
+
+const getDayName = (dayNumber: number): string => {
+  return dayNames[dayNumber as DayOfWeek] || "Invalid day";
+};
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
@@ -37,7 +55,7 @@ export default function CartPage() {
         <div className="text-center py-10">
           <p className="text-muted-foreground">Your cart is empty</p>
           <Link href="/" className="mt-4">
-          <Button className="mt-4">Continue Shopping</Button>
+            <Button className="mt-4">Continue Shopping</Button>
           </Link>
         </div>
       ) : (
@@ -46,21 +64,19 @@ export default function CartPage() {
             {cart.map((item) => (
               <Card key={item.id} className="p-4">
                 <div className="flex items-center gap-4">
-                  {item.image ? (
-                    <Image
-                      src={item.image}
-                      alt={item.name}
-                      width={80}
-                      height={80}
-                      className="rounded-md"
-                    />
-                  ) : (
-                    // Fallback UI when no image is available
-                    <div className="w-20 h-20 bg-gray-200 rounded-md" />
-                  )}
                   <div className="flex-1">
-                    <h3 className="font-semibold">{item.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">
+                      {item.item_name?.includes("undefined")
+                        ? item.item_name.replace("undefined", " ")
+                        : item.item_name}
+                    </h3>
+                    
                     <p className="text-muted-foreground">₹{item.price}</p>
+                  </div>
+                  <Badge variant="outline" className="ml-2">
+                      {item.dietary_type}
+                    </Badge>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
