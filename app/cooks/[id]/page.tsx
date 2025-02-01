@@ -11,8 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cooksByState } from "@/lib/data/states";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
-  Cook,
-  MenuItem,
   dayMapping,
   WeeklySchedule,
   DayOfWeek,
@@ -23,23 +21,27 @@ import { createClient } from "@/utils/supabase/client";
 
 // Add these helper functions before the component
 
-interface CartItem {
-  id: string;
-  cook_id: string;
-  first_name: string;
-  last_name: string;
-  item_name: string;
-  description: string;
-  price: number;
-  dietary_type: "veg" | "non-veg" | "vegan";
-  meal_type: "breakfast" | "lunch" | "dinner";
-  day_of_week: number;
-  cuisine_type: "indian" | "chinese" | "italian" | "mexican" | "thai" | "other";
-  isAvailable: boolean;
-  quantity: number;
+export interface MenuItem {
+  id: string
+  cook_id: string
+  item_name: string
+  description: string
+  price: number
+  dietary_type: string
+  cuisine_type: string
+  meal_type: string
+  day_of_week: number
+  isAvailable: boolean
+  quantity: number
+}
+
+
+export interface CartItem extends MenuItem {
+  menuItems?: MenuItem[];
 }
 
 const { toast } = useToast();
+
 
 export default function CookProfilePage({
   params,
@@ -48,29 +50,72 @@ export default function CookProfilePage({
 }) {
   const [cookData, setCookData] = useState<Cook | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const getCurrentDayNumber = (): DayOfWeek => {
-    const day = new Date().getDay();
-    return (day === 0 ? 7 : day) as DayOfWeek;
-  };
-  // Add state for selected day
-  const [selectedDay, setSelectedDay] = useState<DayOfWeek>(
-    getCurrentDayNumber()
-  );
-  const day = selectedDay;
-  const dayName = dayMapping[day as DayOfWeek];
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
-
-  // Find cook from all states
-  const cook = Object.values(cooksByState)
-    .flat()
-    .find((c) => c.id === params.id);
-
-  if (!cook) {
-    return <div>Cook not found</div>;
-  }
   const { cart, addToCart, removeFromCart } = useCart();
+  const [error, setError] = useState<string | null>(null);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [cook, setCook] = useState<Cook | null>(null);
+  useEffect(() => {
+    const fetchCookData = async () => {
+      setIsLoading(true);
+      try {
+        const supabase = createClient();
+        
+        const { data: cookData, error: cookError } = await supabase
+          .from("cooks")
+          .select("*")
+          .eq("id", params.id)
+          .single();
 
+        if (cookError) throw cookError;
+        if (!cookData) throw new Error("Cook not found");
+
+        setCook(cookData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load cook data");
+        console.error("Error fetching cook:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCookData();
+  }, [params.id]);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!cook) return <div>Cook not found</div>;
+  
+
+  useEffect(() => {
+    const fetchCookData = async () => {
+      setIsLoading(true);
+      try {
+        const supabase = createClient();
+        
+        const { data: cookData, error: cookError } = await supabase
+          .from("cooks")
+          .select("*")
+          .eq("id", params.id)
+          .single();
+
+        if (cookError) throw cookError;
+        if (!cookData) throw new Error("Cook not found");
+
+        setCook(cookData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load cook data");
+        console.error("Error fetching cook:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCookData();
+  }, [params.id]);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!cook) return <div>Cook not found</div>;
   useEffect(() => {
     const newQuantities: Record<string, number> = {};
     cart.forEach((item) => {
@@ -82,50 +127,43 @@ export default function CookProfilePage({
   // Add getCartItemId helper
   const getCartItemId = (cookId: string, day: number) => `${cookId}-${day}`;
 
-  const handleQuantityChange = (day: number, change: number) => {
-    if (!cook) return;
-
-    const itemId = getCartItemId(cook.id, day);
-    const currentQty = quantities[itemId] || 0;
-    const newQty = Math.max(0, currentQty + change);
-
-    if (change < 0) {
-      handleRemoveFromCart(day);
-      return;
+  const handleQuantityChange = async (day: number, change: number) => {
+    setIsLoading(true);
+    try {
+      if (!cook) return;
+  
+      const itemId = getCartItemId(cook.id, day);
+      const currentQty = quantities[itemId] || 0;
+      const newQty = Math.max(0, currentQty + change);
+  
+      // Update quantities state
+      setQuantities((prev) => ({
+        ...prev,
+        [itemId]: newQty
+      }));
+  
+      // Update cart based on quantity change
+      if (change > 0) {
+        addToCart({ 
+          id: itemId,
+          cook_id: cook.cook_id,
+          day_of_week: day,
+          quantity: 1
+        });
+      } else {
+        removeFromCart(itemId);
+      }
+    } catch (error) {
+      console.error('Error updating quantities:', error);
+    } finally {
+      setIsLoading(false);
     }
-
-    setQuantities((prev) => ({ ...prev, [itemId]: newQty }));
-
-    const dayMenu = cook.menuItems.filter((item) => item.day_of_week === day);
-
-    const bundledMenu: CartItem = {
-      id: itemId,
-      cookId: cook.id,
-      name: `${cook.name}'s ${dayMapping[day as DayOfWeek]} Dabba`,
-      description: `${dayMapping[day as DayOfWeek]}'s special dabba`,
-      price: dayMenu.reduce((total, item) => total + item.price, 0),
-      dietary_type: dayMenu[0]?.dietary_type || "veg",
-      cuisine_type: dayMenu[0]?.cuisine_type || "indian",
-      meal_type: "lunch",
-      day_of_week: day, 
-      isAvailable: true,
-      quantity: newQty,
-      menuItems: dayMenu,
-    };
-
-    addToCart(bundledMenu);
-    toast({
-      title: "Added to cart",
-      description: `${cook.name}'s ${
-        dayMapping[day as DayOfWeek]
-      } Dabba has been added to your cart.`,
-    });
   };
 
   // Add remove handler
   const handleRemoveFromCart = (day: number) => {
     if (!cook) return;
-    const itemId = getCartItemId(cook.id, day);
+    const itemId = getCartItemId(cook.cook_id, day);
     removeFromCart(itemId);
     const newQuantities = { ...quantities };
     delete newQuantities[itemId];

@@ -1,10 +1,13 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const publicRoutes = ['/', '/auth/login', '/auth/register', '/browse','/cook/register','/student/register','/search',"/cart",'/checkout','cook/login','/states']
+
+const publicRoutes = ['/', '/auth/login', '/auth/register', '/browse','/cook/register','/student/register','/search',"/cart",'/checkout','cook/login','/states','/cooks/:id','/chatbot']
 
 
 export async function updateSession(request: NextRequest) {
+
+  
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -32,8 +35,15 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Check if the route requires authentication
-  const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname)
+  // Check if the current path matches a dynamic cook route
+const url = request.nextUrl.pathname
+const isDynamicCookRoute = url.startsWith('/cooks/') && url.split('/').length === 3
+const isPublicRoute = publicRoutes.some(route => {
+  if (route === '/cooks/:id') {
+    return isDynamicCookRoute
+  }
+  return route === url
+})
 
   if (!session && !isPublicRoute) {
     // Redirect to login if accessing protected route without session

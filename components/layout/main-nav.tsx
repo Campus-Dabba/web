@@ -106,7 +106,7 @@ export function MainNav() {
           "/cook/login",
           "/cook/registration",
         ].includes(pathname) && (
-          <Link href="/search">
+          <Link href="/chatbot">
             <InputSearch />
           </Link>
         )}

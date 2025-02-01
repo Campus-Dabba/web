@@ -11,6 +11,16 @@ const Input_search = () => {
   );
 }
 
+const Input_search2 = () => {
+  return (
+    <StyledWrapper>
+      <div className="input-container">
+        <input className="input" name="text" type="text" placeholder="Explore AI......." />
+      </div>
+    </StyledWrapper>
+  );
+}
+
 const StyledWrapper = styled.div`
   .input {
     width: 100%;
@@ -220,3 +230,4 @@ const StyledWrapper = styled.div`
   }`;
 
 export default Input_search;
+export  { Input_search2 };

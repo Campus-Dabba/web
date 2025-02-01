@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/providers/cart-provider";
 import { useToast } from "@/components/ui/use-toast";
-import InputSearch from "@/components/ui/search-bar";
+import {Input_search2} from "@/components/ui/search-bar";
 import { UserNav } from "@/components/layout/User-nav";
 import { createClient } from "@/utils/supabase/client";
 import { Session } from "@supabase/supabase-js";
@@ -92,8 +92,8 @@ export function CookNav() {
         {!["/cook/search", "/cook/login", "/cook/register"].includes(
           pathname
         ) && (
-          <Link href="/cook/search">
-            <InputSearch />
+          <Link href="/chatbot">
+            <Input_search2 />
           </Link>
         )}
       </div>

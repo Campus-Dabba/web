@@ -98,6 +98,7 @@ export function CooksList({ selectedState }: CooksListProps) {
     const supabase = createClient();
     try {
       setIsLoading(true);
+      setCooks([]);
 
       // Simple query to check all regions first
       const { data: allRegions } = await supabase
@@ -456,3 +457,4 @@ export function CooksList({ selectedState }: CooksListProps) {
     );
   }
 }
+
